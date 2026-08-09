@@ -1,0 +1,68 @@
+{
+  "PACI": {
+    "cnn_invocations": 318,
+    "wake_rate": 0.159,
+    "cnn_reduction_pct": 84.1,
+    "false_wake_rate": 0.04625,
+    "missed_anomaly_rate_step": 0.39,
+    "fault_detection_rate": 1.0,
+    "simulated_energy": 17900.0,
+    "energy_saving_pct": 82.45098039215686,
+    "latency_ms": 0.07614309999999991
+  },
+  "Always-On CNN": {
+    "cnn_invocations": 2000,
+    "wake_rate": 1.0,
+    "cnn_reduction_pct": 0.0,
+    "false_wake_rate": 1.0,
+    "missed_anomaly_rate_step": 0.0,
+    "fault_detection_rate": 1.0,
+    "simulated_energy": 102000.0,
+    "energy_saving_pct": 0.0,
+    "latency_ms": 0.006310849999999979
+  },
+  "Variance Threshold": {
+    "cnn_invocations": 124,
+    "wake_rate": 0.062,
+    "cnn_reduction_pct": 93.8,
+    "false_wake_rate": 0.02375,
+    "missed_anomaly_rate_step": 0.785,
+    "fault_detection_rate": 0.5,
+    "simulated_energy": 8200.0,
+    "energy_saving_pct": 91.96078431372548,
+    "latency_ms": 0.4028015500000002
+  },
+  "Moving Average": {
+    "cnn_invocations": 82,
+    "wake_rate": 0.041,
+    "cnn_reduction_pct": 95.89999999999999,
+    "false_wake_rate": 0.03625,
+    "missed_anomaly_rate_step": 0.94,
+    "fault_detection_rate": 1.0,
+    "simulated_energy": 6100.0,
+    "energy_saving_pct": 94.01960784313725,
+    "latency_ms": 0.44903685000000015
+  },
+  "CUSUM Detector": {
+    "cnn_invocations": 712,
+    "wake_rate": 0.356,
+    "cnn_reduction_pct": 64.4,
+    "false_wake_rate": 0.29375,
+    "missed_anomaly_rate_step": 0.395,
+    "fault_detection_rate": 1.0,
+    "simulated_energy": 37600.0,
+    "energy_saving_pct": 63.13725490196078,
+    "latency_ms": 0.018147399999999703
+  },
+  "Kalman (No Physics)": {
+    "cnn_invocations": 346,
+    "wake_rate": 0.173,
+    "cnn_reduction_pct": 82.69999999999999,
+    "false_wake_rate": 0.123125,
+    "missed_anomaly_rate_step": 0.6275,
+    "fault_detection_rate": 1.0,
+    "simulated_energy": 19300.0,
+    "energy_saving_pct": 81.07843137254902,
+    "latency_ms": 0.01390210000000014
+  }
+}
