@@ -1,6 +1,12 @@
 import time
-import os
 import sys
+import os
+
+# Suppress TF logging before importing tensorflow
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
+import tensorflow as tf
+tf.get_logger().setLevel('ERROR')
+
 import numpy as np
 from colorama import init, Fore, Style
 
@@ -32,10 +38,6 @@ def run_demo():
     cnn_model = None
     keras_model_path = os.path.join(config.MODELS_DIR, 'best_cnn.h5')
     if os.path.exists(keras_model_path):
-        import tensorflow as tf
-        # Suppress TF logging for clean demo
-        os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
-        tf.get_logger().setLevel('ERROR')
         cnn_model = tf.keras.models.load_model(keras_model_path)
     else:
         print(f"{Fore.RED}Error: CNN model not found. Cannot run full demo.{Style.RESET_ALL}")
