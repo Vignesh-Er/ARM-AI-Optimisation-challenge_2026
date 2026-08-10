@@ -53,7 +53,7 @@ the README only as noted future work, never as an estimate.
 
 - [x] Phase 0 — Compliance and hygiene
 - [x] Phase 1 — Unified C core
-- [ ] Phase 2 — CMSIS-NN integration and export
+- [ ] Phase 2 — CMSIS-NN integration and export (in progress: submodules pinned)
 - [ ] Phase 3 — Measurement harness
 - [ ] Phase 4 — Honest benchmark rebuild
 - [ ] Phase 5 — Rounding-bias budget
@@ -182,14 +182,44 @@ Printed in full to console at the end of the run per section 9.
   (D4's root cause, generalised). Small, deliberate edit to carried-over
   Python, not a rewrite.
 
+## Phase 2 — in progress
+
+- `tensorflow==2.21.0` installed successfully in this environment; the
+  earlier blocker is resolved.
+- CMSIS-NN and CMSIS-DSP vendored as git submodules under `third_party/`,
+  pinned to the exact tags section 9 specifies: CMSIS-NN `v7.0.0`
+  (`22080c68`), CMSIS-DSP `v1.17.1` (`4b4fa8ff`) — both tags confirmed to
+  exist on the upstream remotes before pinning.
+- Checked the pinned v7.0.0 headers directly rather than coding from memory
+  of an older CMSIS-NN API (the brief specifically warns v6/v7 have
+  incompatible signatures): confirmed `arm_convolve_s4` /
+  `arm_convolve_s4_get_buffer_size`, `arm_convolve_wrapper_s8` (+
+  `_get_buffer_size`/`_mve`/`_dsp` variants), `arm_fully_connected_s4`,
+  `arm_fully_connected_s8` (+ buffer-size variants), `arm_softmax_s8` all
+  exist in `Include/arm_nnfunctions.h` with the signatures Phase 2 needs.
+  There is also `arm_convolve_even_s4`, a stricter variant requiring an even
+  kernel-size product — relevant to G10's packing constraint, to be decided
+  once the Tier-1 model architecture is fixed.
+- Verified G8's anchor directly in source (not just taking the brief's
+  paraphrase on faith): `arm_nn_requantize` in
+  `third_party/CMSIS-NN/Include/arm_nnsupportfunctions.h:1577-1591`, and
+  under `CMSIS_NN_USE_SINGLE_ROUNDING` it is exactly
+  `result = new_val >> (total_shift - 1); result = (result + 1) >> 1;`
+  — round-half-up, confirming the bias-budget analysis in Phase 5 has real
+  ground to stand on.
+
+Remaining Phase 2 work (not yet started): train the Tier-1 2-class INT4
+screen and Tier-2 5-class INT8 classifier in `phase4_tinyml/`, write
+`tools/export_cmsisnn.py` (G7: per-channel multiplier/shift lifted exactly
+from the TFLite flatbuffer, verified bit-exact against the TFLite
+interpreter on 200 held-out windows), implement `paci_infer_t1_s4()` /
+`paci_infer_t2_s8()` in `paci_core/`, and the G6 (scratch buffer sizing) and
+G10 (int4 packing round-trip) tests.
+
 ## Blockers
 
 - GitHub push authentication is not yet configured in this environment (no
   `gh` CLI installed). The project owner is installing/logging in `gh`
   separately; local commits proceed and will be pushed once that's ready.
-- `tensorflow` is not installed in this environment. Needed for Phase 2
-  (training/quantizing the Tier-1 INT4 screen and re-exporting the Tier-2
-  INT8 model) and Phase 4 (regenerating benchmark artifacts that depend on
-  the trained model). Will attempt `pip install tensorflow` at the start of
-  Phase 2; if that fails in this environment, it becomes a hard blocker
-  documented here rather than a number that gets fabricated.
+- ~~`tensorflow` not installed~~ — resolved: `pip install tensorflow` succeeded,
+  `tensorflow==2.21.0` importable. No remaining blocker for Phase 2 training.
