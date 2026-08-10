@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: Apache-2.0
 """
 PACI Configuration — All hyperparameters and physical constants.
 Centralised here so every module draws from one source of truth.
@@ -67,6 +68,9 @@ GAS_FLOW_RANGE = (60.0, 140.0)     # sccm
 # ─────────────────────────────────────────────
 WINDOW_SIZE = 32              # 1-D CNN input window length
 N_CLASSES = 5
+NORM_SCALE = 50.0              # CNN input normalization: (measured - ETCH_RATE_NOMINAL) / NORM_SCALE
+                                # single source of truth for both phase4_tinyml/dataset.py
+                                # and paci_core's ring-buffer quantizer (D4)
 CLASS_NAMES = [
     "Normal",
     "Sensor Fault",

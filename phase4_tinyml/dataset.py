@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: Apache-2.0
 import numpy as np
 import sys
 import os
@@ -56,9 +57,11 @@ def generate_cnn_dataset(physics_model, n_scenarios=20, n_steps_per=500, seed=42
         # We will use measured_etch_rate as the signal for the CNN, normalized
         signal = dataset['measured_etch_rate']
         
-        # Simple normalization: mean=0, std=1 (approximate from nominal)
-        # Assuming nominal around 250, std around 10
-        signal_norm = (signal - 250.0) / 50.0
+        # Normalization: (measured - ETCH_RATE_NOMINAL) / NORM_SCALE, both
+        # from config.py — the paci_core ring-buffer quantizer uses the same
+        # two constants (PACI_ETCH_RATE_NOMINAL, PACI_NORM_SCALE) so this
+        # normalization can't silently drift out of sync with the C side (D4).
+        signal_norm = (signal - config.ETCH_RATE_NOMINAL) / config.NORM_SCALE
         
         X_scen, y_scen = extract_windows(signal_norm, dataset['labels'], window_size=config.WINDOW_SIZE)
         all_X.append(X_scen)

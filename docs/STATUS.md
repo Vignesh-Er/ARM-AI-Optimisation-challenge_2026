@@ -52,7 +52,7 @@ the README only as noted future work, never as an estimate.
 ## Phase checklist
 
 - [x] Phase 0 — Compliance and hygiene
-- [ ] Phase 1 — Unified C core
+- [x] Phase 1 — Unified C core
 - [ ] Phase 2 — CMSIS-NN integration and export
 - [ ] Phase 3 — Measurement harness
 - [ ] Phase 4 — Honest benchmark rebuild
@@ -86,6 +86,61 @@ clear the noise floor — the regime where a physics-residual gate should beat
 a moving average, because the MA adapts to slow drift and normalises it away
 while the physics prediction does not.
 
+## Phase 1 — Unified C core (done 2026-08-11)
+
+`paci_core/` implements the exact interface contract from section 8 of the
+brief (`paci_core.h` is copied verbatim, byte-for-byte except for cosmetic
+`#define` column alignment). D2-D5 are satisfied by construction:
+
+- `src/paci_physics.c` — Deal-Grove etch-rate model, ported term-for-term
+  from `phase1_physics/physics_model.py:PhysicsModel.etch_rate`.
+- `src/paci_ekf.c` — scalar EKF predict+update, ported from
+  `phase2_ekf/ekf.py`; implements G13 (checks `P_pred`/`S` before dividing,
+  resets `P` to `PACI_P0_VAR` and increments `health_resets` on violation,
+  never lets NaN through — verified by `tests/test_ekf_health.py`, which
+  forces the reset path with a deliberately negative `R` rather than relying
+  on the fault dataset to happen to trigger it, which it never does under
+  healthy Q/R: `health_resets` is 0 for all 2000 steps of the golden trace).
+- `src/paci_ring.c` — fixes D2 (`paci_ring_read` linearises chronologically,
+  oldest-first, from wherever `head` physically is) and D3 (`total` is
+  `uint32_t`, `head` is `uint8_t` bounded to `[0,32)` by explicit modulo, so
+  neither overflows the way the old `uint8_t buffer_index` did). Verified in
+  `tests/test_ring_buffer.py`; spot-checked that the *raw* physical buffer
+  (what the old bug would have handed to inference) is genuinely
+  non-monotonic at a nonzero phase while `paci_ring_read`'s output is —
+  confirms the test isn't tautological.
+- `src/paci_cascade.c` — `paci_init`/`paci_step` orchestration. Tier 0 (EKF +
+  NIS/watchdog/burn-in gating) is fully implemented and tested. Tier 1/2
+  dispatch — actually invoking CMSIS-NN inference and advancing
+  `tier_reached` past `PACI_TIER_0_EKF` — is Phase 2 work, once
+  `paci_infer_t1_s4`/`paci_infer_t2_s8` exist to invoke; `wake_reason`
+  already reports the real Tier-0 evidence (NIS/watchdog/burn-in) that would
+  trigger that escalation.
+
+`tools/gen_params.py` generates `paci_core/include/paci_params.h` from
+`config.py` (D4); `tests/test_params_sync.py` regenerates it to a scratch
+path and diffs against the committed copy — confirmed this fails when
+`config.py` drifts (temporarily set `TAU = 0.1` to match the old buggy C
+value, test failed, reverted).
+
+`tests/test_bitexact.py` (G1) replays the standard 2000-step/seed-42 dataset
+through `paci_core` via ctypes and checks it against a golden trace
+(`tests/golden/ekf_trace_seed42.json`, recorded once via
+`tools/record_golden_trace.py`) to within 1 ULP of float32.
+
+The old `Core/` directory (containing the D2/D3/D4/D5 bugs) has been removed
+— `paci_core/` supersedes it entirely for physics/EKF/ring/Tier-0 logic. An
+equivalent embedded main-loop demo will be rebuilt on the real API in a
+later phase (bench harness / demo script), not restored as-is.
+
+Build/test toolchain confirmed on this machine: gcc 13.2.0 (MinGW-w64),
+cmake 4.4.2 (installed via `pip install cmake`, since no system CMake was
+present — `pip`'s Scripts dir needs to be on `PATH`), Python 3.12.10 with
+numpy/scipy/pytest already installed. `tensorflow` is **not** installed yet —
+flagged as a Phase 2/4 blocker (needed to train/quantize the CNN and export
+TFLite). 14/14 tests pass via both `pytest tests/` and `ctest --test-dir
+build`.
+
 ## Assumptions
 
 Running log of `// ASSUMPTION:` decision points, appended here as they occur.
@@ -102,9 +157,39 @@ Printed in full to console at the end of the run per section 9.
   rather than a single GitHub handle, since the existing two commits carry a
   different author identity than the submission account. Revisit if the team
   wants a specific named copyright holder.
+- ASSUMPTION (`paci_core/include/paci_core.h`, top of file): the roadmap
+  (section 7, Phase 1) lists `paci_types.h` alongside `paci_core.h` and
+  `paci_params.h` as files to create, but section 8's exact-header mandate
+  puts every typedef directly in `paci_core.h`. Splitting the typedefs into a
+  separate `paci_types.h` would mean `paci_core.h`'s visible contents no
+  longer match the mandated text exactly. Chose to keep everything in
+  `paci_core.h` as specified and skip a redundant `paci_types.h`. Revisit if
+  the project owner specifically wants the split (e.g. for a future non-C
+  binding that only wants the types).
+- ASSUMPTION (`paci_core/src/paci_cascade.c`, `PACI_PROVISIONAL_INPUT_SCALE`):
+  the CNN's true int8 input scale/zero-point are decided by the TFLite
+  converter when Phase 2 trains and quantizes the model; there is no trained
+  model yet to extract them from (G7). Ring-buffer samples are quantized
+  under a provisional fixed scale (0.25/LSB on the same normalized signal
+  `phase4_tinyml/dataset.py` trains on) sized not to saturate int8 for the
+  current dataset's worst case. Must be replaced by the real exported scale
+  in Phase 2 — any window recorded before that point is provisional, not
+  representative, and should not be used as calibration data.
+- ASSUMPTION (`config.py`, `NORM_SCALE`): added this constant (was previously
+  a hardcoded `50.0` literal only in `phase4_tinyml/dataset.py`) and updated
+  `dataset.py` to import it, so the C ring-buffer quantizer and the Python
+  training normalization can't silently diverge the way `TAU`/`Q_VAR` did
+  (D4's root cause, generalised). Small, deliberate edit to carried-over
+  Python, not a rewrite.
 
 ## Blockers
 
 - GitHub push authentication is not yet configured in this environment (no
   `gh` CLI installed). The project owner is installing/logging in `gh`
   separately; local commits proceed and will be pushed once that's ready.
+- `tensorflow` is not installed in this environment. Needed for Phase 2
+  (training/quantizing the Tier-1 INT4 screen and re-exporting the Tier-2
+  INT8 model) and Phase 4 (regenerating benchmark artifacts that depend on
+  the trained model). Will attempt `pip install tensorflow` at the start of
+  Phase 2; if that fails in this environment, it becomes a hard blocker
+  documented here rather than a number that gets fabricated.
