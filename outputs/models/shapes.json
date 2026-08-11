@@ -1,0 +1,138 @@
+{
+  "window_size": 64,
+  "tier1": {
+    "model": "tier1",
+    "window_size": 64,
+    "n_outputs": 2,
+    "layers": [
+      {
+        "name": "tier1_conv1_int8",
+        "op": "CONV_2D",
+        "c_in": 1,
+        "c_out": 8,
+        "k": 5,
+        "pad": "same",
+        "output_dims_nhwc": [
+          1,
+          1,
+          64,
+          8
+        ],
+        "dtype": "int8"
+      },
+      {
+        "name": "tier1_conv2_int4",
+        "op": "CONV_2D",
+        "c_in": 8,
+        "c_out": 8,
+        "k": 3,
+        "pad": "same",
+        "output_dims_nhwc": [
+          1,
+          1,
+          64,
+          8
+        ],
+        "dtype": "int4"
+      },
+      {
+        "name": "global_average_pool",
+        "op": "AVERAGE_POOL_2D",
+        "c_in": 8,
+        "c_out": 8,
+        "filter_w": 64,
+        "output_dims_nhwc": [
+          1,
+          1,
+          1,
+          8
+        ],
+        "dtype": "int8"
+      },
+      {
+        "name": "tier1_logits_int4",
+        "op": "FULLY_CONNECTED",
+        "c_in": 8,
+        "c_out": 2,
+        "output_dims": [
+          1,
+          2
+        ],
+        "dtype": "int4"
+      }
+    ]
+  },
+  "tier2": {
+    "model": "tier2",
+    "window_size": 64,
+    "n_outputs": 5,
+    "layers": [
+      {
+        "name": "conv1d_2",
+        "op": "CONV_2D",
+        "c_in": 1,
+        "c_out": 16,
+        "k": 5,
+        "pad": "same",
+        "output_dims_nhwc": [
+          1,
+          1,
+          64,
+          16
+        ],
+        "dtype": "int8"
+      },
+      {
+        "name": "conv1d_3",
+        "op": "CONV_2D",
+        "c_in": 16,
+        "c_out": 32,
+        "k": 3,
+        "pad": "same",
+        "output_dims_nhwc": [
+          1,
+          1,
+          64,
+          32
+        ],
+        "dtype": "int8"
+      },
+      {
+        "name": "global_average_pool",
+        "op": "AVERAGE_POOL_2D",
+        "c_in": 32,
+        "c_out": 32,
+        "filter_w": 64,
+        "output_dims_nhwc": [
+          1,
+          1,
+          1,
+          32
+        ],
+        "dtype": "int8"
+      },
+      {
+        "name": "dense1",
+        "op": "FULLY_CONNECTED",
+        "c_in": 32,
+        "c_out": 32,
+        "output_dims": [
+          1,
+          32
+        ],
+        "dtype": "int8"
+      },
+      {
+        "name": "tier2_logits",
+        "op": "FULLY_CONNECTED",
+        "c_in": 32,
+        "c_out": 5,
+        "output_dims": [
+          1,
+          5
+        ],
+        "dtype": "int8"
+      }
+    ]
+  }
+}

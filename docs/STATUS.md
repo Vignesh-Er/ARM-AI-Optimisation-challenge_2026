@@ -329,12 +329,72 @@ every fault class with this window/architecture; it may need a shallower
 floor for Sensor Fault/Gas Leak/Unexpected Deviation specifically, informed
 by this same sweep data rather than picked arbitrarily.
 
-Remaining Phase 2 work: train the Tier-1/Tier-2 *fixture* models (throwaway
-weights, frozen shapes at window=64 — see the two-stage plan below), write
-`tools/export_cmsisnn.py` (G7: per-channel multiplier/shift lifted exactly
-from the TFLite flatbuffer, verified bit-exact against the TFLite
-interpreter on 200 held-out windows), implement `paci_infer_t1_s4()` /
-`paci_infer_t2_s8()` in `paci_core/`, and the G6 (scratch buffer sizing) test.
+## GATE 2.1 — fixture models trained, BN fold verified (2026-08-11)
+
+`tools/train_fixture_models.py` generates the fixture dataset (window=64,
+k=1.0, `n_scenarios=20`, `n_steps_per=500`) and trains both models via
+`phase4_tinyml/train.py`. `tools/verify_bn_fold.assert_bn_folded()` confirms
+no unfused `MUL`/`ADD` immediately follows any `CONV_2D` for either model.
+`tools/write_shape_manifest.py` wrote `outputs/models/shapes.json`.
+
+Sizes: `tier2_fixture.tflite` 11.80 KB (matches the ~11.78 KB the old,
+now-deleted README claimed for the original ungated model — same budget,
+now honestly earned). `tier1_fixture.tflite` 6.90 KB as an **INT8 baseline**
+— over the "<3 KB" Tier-1 target as-is, but that target is for the INT4
+*deployed* footprint (Task 2.2/2.3); the INT8 baseline being larger than
+the eventual INT4-packed size is expected, not a budget violation yet.
+Actual post-packing size will be checked at export time; if still over
+budget, the fallback is reducing channel counts to the next even value
+(section 2), never changing the now-frozen window.
+
+**Two real findings from inspecting the actual converted `.tflite` files
+directly** (`tools/verify_bn_fold.op_sequence` + `tf.lite.Interpreter`),
+not assumed from the architecture alone — both materially change the
+Task 2.3/2.4 plan:
+
+1. **`GlobalAveragePooling1D` lowers to a `MEAN` op, not `AVERAGE_POOL_2D`**,
+   and critically **its input and output tensors have independently
+   *different* scales** (tier2: input scale 0.1390902 → output scale
+   0.01018135, ~13.7x ratio; zero-points happened to both be -128 here but
+   that's not guaranteed either). `arm_avgpool_s8`'s signature
+   (`cmsis_nn_pool_params`: stride/padding/activation only, no offset or
+   multiplier/shift fields) assumes input and output share one scale —
+   it is not a valid substitute for what these models actually do at that
+   step. TFLite's own quantized `Mean` kernel instead accumulates the raw
+   int8 sum, requantizes it with a multiplier/shift derived from
+   `input_scale / (window_size * output_scale)` (via `QuantizeMultiplier`),
+   then adds `output_zero_point` — exactly the pattern
+   `tools/ref_cmsisnn.py:global_average_pool_s8` already implements (written
+   before this was confirmed, from reasoning about what a quantized mean
+   *should* do — turned out to match TFLite's actual kernel). Task 2.4's
+   `paci_infer.c` will implement this directly (~10 lines, same
+   accumulate-then-`arm_nn_requantize` pattern CMSIS-NN's own kernels use
+   throughout) rather than calling a CMSIS-NN pooling kernel that doesn't
+   fit — verified against Oracle A (the real TFLite interpreter output),
+   not asserted by construction.
+2. **Every Dense (`FULLY_CONNECTED`) weight tensor is per-channel
+   quantized**, not per-tensor (`tier2_logits` weights: 5 scales for 5
+   output channels; `dense1` weights: 32 scales for 32 output channels;
+   confirmed via `quantization_parameters.scales` length matching the
+   output-channel count exactly, `quantized_dimension=0`). Task 2.4 must
+   use `arm_fully_connected_per_channel_s8` (`cmsis_nn_per_channel_quant_params`,
+   an array of multiplier/shift), not `arm_fully_connected_s8` (which takes
+   a single per-tensor `cmsis_nn_per_tensor_quant_params`) — using the
+   per-tensor variant against per-channel-quantized weights would silently
+   apply only the first channel's scale to every output.
+
+## GATE 2.2 (done in GATE 2.0's commit)
+
+INT4 probe already run and recorded — see the GATE 2.0 section above.
+
+Remaining Phase 2 work: write `tools/export_cmsisnn.py` (G7: multiplier/
+shift derived via `tools/quantize_multiplier.py`'s `QuantizeMultiplier`
+port from each tensor's stored float scale — the flatbuffer has no other
+representation to read, see that module's docstring — verified bit-exact
+against the TFLite interpreter on 200 held-out windows for Tier-2, and
+against `tools/ref_cmsisnn.py`'s NumPy reference for Tier-1), implement
+`paci_infer_t1_s4()` / `paci_infer_t2_s8()` in `paci_core/`, and the G6
+(scratch buffer sizing) test.
 
 ## Two-stage model plan (fixture vs release)
 
