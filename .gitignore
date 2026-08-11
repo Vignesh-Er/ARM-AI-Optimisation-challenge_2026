@@ -50,6 +50,15 @@ FVP_Corstone_SSE-300*/
 # convention of keeping benchmark_report.md/.json as reviewable snapshots)
 outputs/bench/*.json
 
+# Generated CMSIS-NN weight headers (tools/export_cmsisnn.py) are derived
+# from trained model binaries that are themselves gitignored above — like
+# those .tflite/.h5 files, regenerate via
+# tools/train_fixture_models.py && tools/export_cmsisnn.py rather than
+# committing large generated weight arrays (paci_params.h stays committed:
+# it's generated from committed config.py, not from an ungitted binary).
+paci_core/include/tier1_weights.h
+paci_core/include/tier2_weights.h
+
 # Editor
 .vscode/
 .idea/

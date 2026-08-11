@@ -136,7 +136,25 @@ def load_lib():
         ctypes.POINTER(ctypes.c_float),
     ]
 
+    lib.paci_infer_t2_s8.restype = ctypes.c_int
+    lib.paci_infer_t2_s8.argtypes = [
+        ctypes.POINTER(ctypes.c_int8), ctypes.POINTER(ctypes.c_int8), ctypes.POINTER(ctypes.c_int32),
+    ]
+
+    lib.paci_infer_t1_s4.restype = ctypes.c_int
+    lib.paci_infer_t1_s4.argtypes = [
+        ctypes.POINTER(ctypes.c_int8), ctypes.POINTER(ctypes.c_int8), ctypes.POINTER(ctypes.c_int32),
+    ]
+
     return lib
+
+
+def infer_t2_s8(lib, window_int8_list):
+    window = (ctypes.c_int8 * PACI_WINDOW_SIZE)(*window_int8_list)
+    class_id = ctypes.c_int8()
+    margin = ctypes.c_int32()
+    status = lib.paci_infer_t2_s8(window, ctypes.byref(class_id), ctypes.byref(margin))
+    return status, class_id.value, margin.value
 
 
 def ring_read(lib, ring):

@@ -387,14 +387,72 @@ Task 2.3/2.4 plan:
 
 INT4 probe already run and recorded — see the GATE 2.0 section above.
 
-Remaining Phase 2 work: write `tools/export_cmsisnn.py` (G7: multiplier/
-shift derived via `tools/quantize_multiplier.py`'s `QuantizeMultiplier`
-port from each tensor's stored float scale — the flatbuffer has no other
-representation to read, see that module's docstring — verified bit-exact
-against the TFLite interpreter on 200 held-out windows for Tier-2, and
-against `tools/ref_cmsisnn.py`'s NumPy reference for Tier-1), implement
-`paci_infer_t1_s4()` / `paci_infer_t2_s8()` in `paci_core/`, and the G6
-(scratch buffer sizing) test.
+## GATE 2.3/2.4 (Tier-2 only) — real C inference, verified bit-exact (2026-08-11)
+
+`tools/export_cmsisnn.py` walks the TFLite flatbuffer's op sequence
+structurally (same schema-walking approach as `tools/verify_bn_fold.py`),
+not by tensor-name matching — op input ordering (`CONV_2D`: `[input,
+filter, bias]`; `FULLY_CONNECTED`: `[input, weights, bias]`) is part of the
+stable TFLite operator spec, while converted tensor names are compound and
+implementation-detail-shaped (e.g. `tier2_logits_1/MatMul;tier2_logits_1/BiasAdd`).
+Per-channel multiplier/shift come from `tools/quantize_multiplier.py`'s
+`QuantizeMultiplier` port applied to each tensor's stored float scale.
+Weight/bias arrays are copied through with no transpose — confirmed
+correct only by the oracle passing, not assumed.
+
+**Oracle A, done in two stages**, both passing:
+1. `tests/test_export_cmsisnn.py`: exported weights run through
+   `tools/ref_cmsisnn.py`'s Python arithmetic primitives match the real
+   TFLite interpreter's pre-softmax logits **exactly**, element for
+   element, on 200 held-out windows (reads the actual logits tensor via
+   `experimental_preserve_all_tensors`, not the softmax output — softmax
+   is monotonic, so an argmax-only check could pass on merely-close
+   logits, which isn't what G7 asks for). Caught one bug on the way: the
+   first draft searched for the logits tensor by substring name match
+   (`"BiasAdd" in name and "logits" in name`), which matched the bias
+   *weight constant* (also named `.../logits_1/BiasAdd`) instead of the
+   runtime activation tensor — fixed by using the same structural op-walk
+   the exporter uses (`Outputs(0)` of the last `FULLY_CONNECTED` op).
+2. `tests/test_infer_t2.py`: the actual compiled `paci_infer_t2_s8()` —
+   real `arm_convolve_wrapper_s8`, real `arm_fully_connected_per_channel_s8`,
+   linked against the full vendored CMSIS-NN library — matches the TFLite
+   interpreter exactly (class_id AND margin) on the same 200 windows,
+   through ctypes against the built `.dll`. This is the actual gate
+   requirement (paci_infer_t2_s8 itself, not a Python stand-in for it).
+
+`paci_core/src/paci_infer.c`: `arm_convolve_wrapper_s8` for both conv
+layers (`*_get_buffer_size` checked against the static scratch buffer at
+runtime, `PACI_E_BUFSIZE` on overflow — G6), `arm_fully_connected_per_channel_s8`
+for both dense layers (per-channel, not the per-tensor variant — GATE 2.1's
+finding), and a **hand-written** accumulate-then-`arm_nn_requantize` global
+average pool (not `arm_avgpool_s8`, which has no rescale parameters and
+can't reproduce the real Mean op's differing input/output scales — GATE
+2.1's other finding). `paci_infer_t2_s8`/`paci_infer_t1_s4` are declared in
+`paci_internal.h` rather than the exact-contract `paci_core.h` (section 8
+predates these two functions; extending that file would break its own
+byte-for-byte mandate).
+
+G6 test (`test_paci_infer_t2_s8_reports_bufsize_when_scratch_too_small`):
+`PACI_SCRATCH_BYTES` is overridable via compile definition; a second CMake
+target (`paci_core_tiny_scratch`, 16-byte scratch) confirms
+`PACI_E_BUFSIZE` actually fires rather than existing as unreachable code.
+
+`tier2_weights.h` is generated (`paci_core/include/`, gitignored like the
+`.tflite`/`.h5` it derives from — regenerate via
+`tools/export_cmsisnn.py outputs/models/tier2_fixture.tflite
+paci_core/include/tier2_weights.h --prefix tier2`); `paci_infer.c` guards
+on `__has_include("tier2_weights.h")` so the library still builds (Tier-2
+inference reporting `PACI_E_QUANT`, "not built") if that step is skipped.
+
+92/92 tests pass.
+
+**Remaining Phase 2 work**: extend `tools/export_cmsisnn.py` for Tier-1
+(INT4 re-quantization of `tier1_conv2`/`tier1_logits` per section 3's
+fallback branch, packed via `tools/int4_pack.py`), implement
+`paci_infer_t1_s4()` for real (currently a documented not-yet-built
+`PACI_E_QUANT` stub, not a fake-success placeholder), and Oracle B
+(`tools/ref_cmsisnn.py` NumPy reference, since Tier-1 has no TFLite
+interpreter to check against).
 
 ## Two-stage model plan (fixture vs release)
 

@@ -25,6 +25,22 @@ void paci_ring_push(paci_ring_t *ring, int8_t sample);
 // NaN), and returns PACI_E_NUMERIC.
 paci_status_t paci_ekf_step(paci_ekf_t *ekf, float z, float pred_physics, float *out_nis);
 
+// Tier-1 (2-class, mixed INT8/INT4) and Tier-2 (5-class, INT8) CMSIS-NN
+// inference, per section 5 of the Phase 2 continuation brief ("declared in
+// the existing paci_core.h style" — kept here rather than literally inside
+// paci_core.h, since section 8 mandates that file stay byte-for-byte exact
+// and these two functions did not exist in the original contract).
+// class_id is the argmax class; margin is top logit minus runner-up, int8/
+// int32 logit units, computed on the RAW pre-softmax output (softmax is
+// monotonic, so this changes neither the class nor the rank order the
+// margin is measured over). Returns PACI_E_NULL on a null pointer,
+// PACI_E_BUFSIZE if a layer's CMSIS-NN scratch requirement exceeds the
+// static scratch buffer, PACI_E_QUANT if the generated weights header is
+// missing (paci_core built without running tools/export_cmsisnn.py first)
+// or a CMSIS-NN kernel call itself reports failure.
+paci_status_t paci_infer_t1_s4(const int8_t window[PACI_WINDOW_SIZE], int8_t *class_id, int32_t *margin);
+paci_status_t paci_infer_t2_s8(const int8_t window[PACI_WINDOW_SIZE], int8_t *class_id, int32_t *margin);
+
 #ifdef __cplusplus
 }
 #endif
