@@ -53,7 +53,7 @@ the README only as noted future work, never as an estimate.
 
 - [x] Phase 0 — Compliance and hygiene
 - [x] Phase 1 — Unified C core
-- [ ] Phase 2 — CMSIS-NN integration and export (in progress: submodules pinned)
+- [x] Phase 2 — CMSIS-NN integration and export
 - [ ] Phase 3 — Measurement harness
 - [ ] Phase 4 — Honest benchmark rebuild
 - [ ] Phase 5 — Rounding-bias budget
@@ -387,7 +387,7 @@ Task 2.3/2.4 plan:
 
 INT4 probe already run and recorded — see the GATE 2.0 section above.
 
-## GATE 2.3/2.4 (Tier-2 only) — real C inference, verified bit-exact (2026-08-11)
+## GATE 2.3/2.4 — Tier-2 (2026-08-11)
 
 `tools/export_cmsisnn.py` walks the TFLite flatbuffer's op sequence
 structurally (same schema-walking approach as `tools/verify_bn_fold.py`),
@@ -446,13 +446,71 @@ inference reporting `PACI_E_QUANT`, "not built") if that step is skipped.
 
 92/92 tests pass.
 
-**Remaining Phase 2 work**: extend `tools/export_cmsisnn.py` for Tier-1
-(INT4 re-quantization of `tier1_conv2`/`tier1_logits` per section 3's
-fallback branch, packed via `tools/int4_pack.py`), implement
-`paci_infer_t1_s4()` for real (currently a documented not-yet-built
-`PACI_E_QUANT` stub, not a fake-success placeholder), and Oracle B
-(`tools/ref_cmsisnn.py` NumPy reference, since Tier-1 has no TFLite
-interpreter to check against).
+## GATE 2.3/2.4 — Tier-1 (INT4), real C inference, verified bit-exact (2026-08-11)
+
+`tools/export_cmsisnn.py` extended for Tier-1's INT4 re-quantization
+(section 3's confirmed fallback branch — Task 2.2 found the TFLite
+converter never emits real INT4). For each designated layer: dequantize
+the INT8-baseline weight back to float through its own (per-channel) INT8
+scale, re-quantize to 4-bit symmetric (range [-7,7], zero point 0, clamped
+not wrapped — zero clamps occurred in practice, expected since the scale
+is deliberately sized to the channel's own max magnitude), pack via
+`tools/int4_pack.py` (nibble order verified against CMSIS-NN's own test-
+vector generator, GATE 2.0), recompute multiplier/shift from the NEW scale
+via `tools/quantize_multiplier.py` (never reused the INT8 multipliers).
+
+**Real API constraint found by reading the headers, not assumed**
+(section 3's own instruction): `arm_convolve_s4` takes
+`cmsis_nn_per_channel_quant_params` (an array — `tier1_conv2` is quantized
+per-channel, as the brief's section 2 assumed), but `arm_fully_connected_s4`
+takes `cmsis_nn_per_tensor_quant_params` (a single multiplier/shift — there
+is no per-channel INT4 fully-connected kernel in this CMSIS-NN checkout),
+so `tier1_logits` is necessarily quantized **per-tensor**, one shared int4
+scale across the whole weight matrix, not per-channel. Documented at the
+decision site in `tools/export_cmsisnn.py` and in `paci_infer.c`.
+
+**Real bug found and fixed, not just theoretical risk**: the first version
+reused the INT8-baseline's `int32` bias unchanged for the INT4 layers.
+TFLite's convention is `bias_scale = input_scale * weight_scale`; since
+re-quantizing the weight to INT4 changed `weight_scale` by roughly 18x in
+this architecture, the untouched bias was now off by that same ~18x
+relative to the (correctly rescaled) weight-term, and CMSIS-NN sums weight
+-term and bias as raw `int32` before a single `arm_nn_requantize` call — so
+every accumulator was silently corrupted. Symptom: `paci_infer_t1_s4`'s
+early layers were dramatically *less* saturated than the real INT8-baseline
+TFLite interpreter's equivalent layer on the same input (an oversized bias
+was overwhelming a correctly-shrunk weight term) — caught by comparing
+against the real INT8 baseline's own intermediate tensors
+(`experimental_preserve_all_tensors`), not by the INT4 path merely being
+self-consistent with itself. Fixed by `_rescale_bias()`: re-derive the bias
+from its dequantized float value under the new weight scale, the same
+"dequantize through the old scale, requantize under the new one" pattern
+used for the weights themselves.
+
+Oracle B (no TFLite interpreter exists for real INT4, so
+`tools/ref_cmsisnn.py`'s NumPy primitives — already proven bit-exact
+against the real compiled `arm_nn_requantize`, GATE 2.0 — are the ground
+truth): `tests/test_infer_t1.py` — the actual compiled `paci_infer_t1_s4()`,
+real `arm_convolve_s4` and `arm_fully_connected_s4` kernels linked in,
+matches the NumPy reference exactly (class_id and margin) on 200 held-out
+windows via ctypes.
+
+`paci_core/src/paci_infer.c` restructured so the shared helpers
+(`paci_conv1d_s8`, `paci_global_avgpool_s8`, `paci_top2_margin`) compile
+under `#if PACI_HAVE_TIER1 || PACI_HAVE_TIER2` rather than nested inside
+Tier-2's block only — an earlier draft had Tier-1's code calling functions
+that only existed when Tier-2's weights header was also present, which
+happened to work in this repo (both tiers are always exported together)
+but was structurally wrong.
+
+Deployed Tier-1 weight+bias footprint: 216 bytes (0.21 KB), well under the
+<3 KB budget (section 2) — no need to shrink channel counts.
+
+93/93 tests pass. `tools/check_no_fixture_in_results.py` (G2.5): clean, no
+fixture references in `outputs/reports/`, `outputs/bench/`, or `README.md`.
+
+**Phase 2 complete** (G2.0 through G2.5). Remaining before Phase 3: none —
+Phase 3 (measurement harness) is next.
 
 ## Two-stage model plan (fixture vs release)
 

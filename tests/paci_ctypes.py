@@ -157,6 +157,14 @@ def infer_t2_s8(lib, window_int8_list):
     return status, class_id.value, margin.value
 
 
+def infer_t1_s4(lib, window_int8_list):
+    window = (ctypes.c_int8 * PACI_WINDOW_SIZE)(*window_int8_list)
+    class_id = ctypes.c_int8()
+    margin = ctypes.c_int32()
+    status = lib.paci_infer_t1_s4(window, ctypes.byref(class_id), ctypes.byref(margin))
+    return status, class_id.value, margin.value
+
+
 def ring_read(lib, ring):
     out = (ctypes.c_int8 * PACI_WINDOW_SIZE)()
     status = lib.paci_ring_read(ctypes.byref(ring), out)
