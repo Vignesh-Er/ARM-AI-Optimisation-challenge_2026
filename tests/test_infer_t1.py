@@ -34,13 +34,12 @@ from tools.export_cmsisnn import export_tier1  # noqa: E402
 
 from paci_ctypes import PACI_OK, infer_t1_s4, load_lib  # noqa: E402
 
-_TFLITE_PATH = os.path.join(_PROJECT_ROOT, "outputs", "models", "tier1_fixture.tflite")
 _N_WINDOWS = 200
 
 
-def _require_fixture_model():
-    if not os.path.isfile(_TFLITE_PATH):
-        pytest.skip(f"{_TFLITE_PATH} not found. Run `python tools/train_fixture_models.py` first.")
+def _require_model(path):
+    if not os.path.isfile(path):
+        pytest.skip(f"{path} not found. Run `python tools/train_fixture_models.py` first.")
 
 
 @pytest.fixture(scope="module")
@@ -79,8 +78,12 @@ def _top2_margin(logits):
     return int(order[0]), int(logits[order[0]]) - int(logits[order[1]])
 
 
-def test_paci_infer_t1_s4_matches_numpy_reference_exactly(lib):
-    _require_fixture_model()
+def test_paci_infer_t1_s4_matches_numpy_reference_exactly(lib, tier1_model_path):
+    """NOTE (Task 3.0c): see test_infer_t2.py's equivalent test for why
+    --tier1-model alone doesn't re-target paci_infer_t1_s4 itself (weights
+    are baked into paci_core at build time) — re-verifying against a
+    Stage-B release model needs export_cmsisnn.py + cmake --build first."""
+    _require_model(tier1_model_path)
 
     physics = PhysicsModel()
     _, _, X_test, _, _, _ = generate_cnn_dataset(
@@ -89,12 +92,12 @@ def test_paci_infer_t1_s4_matches_numpy_reference_exactly(lib):
     assert len(X_test) >= _N_WINDOWS
 
     import tensorflow as tf
-    interp = tf.lite.Interpreter(model_path=_TFLITE_PATH)
+    interp = tf.lite.Interpreter(model_path=tier1_model_path)
     interp.allocate_tensors()
     inp_detail = interp.get_input_details()[0]
     in_scale, in_zp = inp_detail["quantization"]
 
-    layers = export_tier1(_TFLITE_PATH, config.WINDOW_SIZE)
+    layers = export_tier1(tier1_model_path, config.WINDOW_SIZE)
 
     mismatches = []
     for idx in range(_N_WINDOWS):

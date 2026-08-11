@@ -1,0 +1,79 @@
+{
+  "window_size": 64,
+  "tier1": [
+    {
+      "op": "CONV_2D",
+      "accumulation_depth": 5,
+      "input_scale": 0.04920493811368942,
+      "output_scale": 0.052583470940589905,
+      "weight_bits": 8,
+      "layer_name": "tier1_conv1"
+    },
+    {
+      "op": "CONV_2D_S4",
+      "accumulation_depth": 24,
+      "input_scale": 0.052583470940589905,
+      "output_scale": 0.15667524933815002,
+      "weight_bits": 4,
+      "layer_name": "tier1_conv2"
+    },
+    {
+      "op": "MEAN",
+      "accumulation_depth": 64,
+      "input_scale": 0.15667524933815002,
+      "output_scale": 0.007900998927652836,
+      "weight_bits": null,
+      "layer_name": "tier1_gap"
+    },
+    {
+      "op": "FULLY_CONNECTED_S4",
+      "accumulation_depth": 8,
+      "input_scale": 0.007900998927652836,
+      "output_scale": 0.03309877589344978,
+      "weight_bits": 4,
+      "layer_name": "tier1_logits"
+    }
+  ],
+  "tier2": [
+    {
+      "op": "CONV_2D",
+      "accumulation_depth": 5,
+      "input_scale": 0.04920493811368942,
+      "output_scale": 0.061493564397096634,
+      "weight_bits": 8,
+      "layer_name": "tier2_conv1"
+    },
+    {
+      "op": "CONV_2D",
+      "accumulation_depth": 48,
+      "input_scale": 0.061493564397096634,
+      "output_scale": 0.13909019529819489,
+      "weight_bits": 8,
+      "layer_name": "tier2_conv2"
+    },
+    {
+      "op": "MEAN",
+      "accumulation_depth": 64,
+      "input_scale": 0.13909019529819489,
+      "output_scale": 0.010181354358792305,
+      "weight_bits": null,
+      "layer_name": "tier2_gap"
+    },
+    {
+      "op": "FULLY_CONNECTED",
+      "accumulation_depth": 32,
+      "input_scale": 0.010181354358792305,
+      "output_scale": 0.035723116248846054,
+      "weight_bits": 8,
+      "layer_name": "tier2_dense1"
+    },
+    {
+      "op": "FULLY_CONNECTED",
+      "accumulation_depth": 32,
+      "input_scale": 0.035723116248846054,
+      "output_scale": 0.11619645357131958,
+      "weight_bits": 8,
+      "layer_name": "tier2_logits"
+    }
+  ]
+}

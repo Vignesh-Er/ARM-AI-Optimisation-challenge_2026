@@ -156,6 +156,10 @@ def export_conv_layer(graph, op_idx, name):
         "multiplier": multipliers,
         "shift": shifts,
         "n_channels": len(multipliers),
+        "input_scale": input_scale,
+        "output_scale": output_scale,
+        "accumulation_depth": weight.shape[1] * weight.shape[2] * weight.shape[3],  # HK*WK*C_IN
+        "weight_bits": 8,
     }
 
 
@@ -188,6 +192,10 @@ def export_dense_layer(graph, op_idx, name):
         "shift": shifts,
         "n_channels": len(multipliers),
         "is_per_channel": is_per_channel,
+        "input_scale": input_scale,
+        "output_scale": output_scale,
+        "accumulation_depth": weight.shape[1],  # C_IN
+        "weight_bits": 8,
     }
 
 
@@ -311,6 +319,10 @@ def export_conv_layer_s4(graph, op_idx, name):
         "shift": shifts,
         "n_channels": len(multipliers),
         "n_clamps_per_channel": n_clamps,
+        "input_scale": input_scale,
+        "output_scale": output_scale,
+        "accumulation_depth": weight.shape[1] * weight.shape[2] * weight.shape[3],  # HK*WK*C_IN
+        "weight_bits": 4,
     }
 
 
@@ -347,6 +359,10 @@ def export_dense_layer_s4(graph, op_idx, name):
         "multiplier": multiplier,   # scalar: per-TENSOR, not per-channel
         "shift": shift,
         "n_clamps": n_clamps,
+        "input_scale": input_scale,
+        "output_scale": output_scale,
+        "accumulation_depth": weight.shape[1],  # C_IN
+        "weight_bits": 4,
     }
 
 
@@ -374,6 +390,10 @@ def export_mean_layer(graph, op_idx, name, window_size):
         "output_offset": output_q["zero_points"][0],
         "multiplier": multiplier,
         "shift": shift,
+        "input_scale": input_scale,
+        "output_scale": output_scale,
+        "accumulation_depth": window_size,
+        "weight_bits": None,  # no weights — a pure rescale, not a learned layer
     }
 
 

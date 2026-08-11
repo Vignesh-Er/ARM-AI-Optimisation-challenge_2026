@@ -27,13 +27,12 @@ from tools.export_cmsisnn import export_tier2  # noqa: E402
 from paci_ctypes import PACI_OK, infer_t2_s8, load_lib  # noqa: E402
 from test_export_cmsisnn import _run_reference_pipeline  # noqa: E402
 
-_TFLITE_PATH = os.path.join(_PROJECT_ROOT, "outputs", "models", "tier2_fixture.tflite")
 _N_WINDOWS = 200
 
 
-def _require_fixture_model():
-    if not os.path.isfile(_TFLITE_PATH):
-        pytest.skip(f"{_TFLITE_PATH} not found. Run `python tools/train_fixture_models.py` first.")
+def _require_model(path):
+    if not os.path.isfile(path):
+        pytest.skip(f"{path} not found. Run `python tools/train_fixture_models.py` first.")
 
 
 @pytest.fixture(scope="module")
@@ -46,8 +45,19 @@ def _top2_margin(logits):
     return int(order[0]), int(logits[order[0]]) - int(logits[order[1]])
 
 
-def test_paci_infer_t2_s8_matches_tflite_interpreter_exactly(lib):
-    _require_fixture_model()
+def test_paci_infer_t2_s8_matches_tflite_interpreter_exactly(lib, tier2_model_path):
+    """NOTE (Task 3.0c): paci_infer_t2_s8 itself reads weights baked into
+    paci_core at BUILD time (tier2_weights.h), not from tier2_model_path at
+    test time — that's inherent to this project's static, no-dynamic-
+    loading design (G6/section 9). Re-verifying against a Stage-B release
+    model end to end is `export_cmsisnn.py ... --prefix tier2` (from the
+    release .tflite) followed by `cmake --build build`, THEN this test with
+    --tier2-model=<release .tflite> so the Python reference side recomputes
+    from the same model the rebuilt library embeds. --tier2-model alone
+    only re-points the ORACLE, not the thing being tested against it — the
+    two must be kept in sync manually across a rebuild.
+    """
+    _require_model(tier2_model_path)
     import tensorflow as tf
 
     physics = PhysicsModel()
@@ -56,12 +66,12 @@ def test_paci_infer_t2_s8_matches_tflite_interpreter_exactly(lib):
     )
     assert len(X_test) >= _N_WINDOWS
 
-    interp = tf.lite.Interpreter(model_path=_TFLITE_PATH, experimental_preserve_all_tensors=True)
+    interp = tf.lite.Interpreter(model_path=tier2_model_path, experimental_preserve_all_tensors=True)
     interp.allocate_tensors()
     inp_detail = interp.get_input_details()[0]
     in_scale, in_zp = inp_detail["quantization"]
 
-    layers = export_tier2(_TFLITE_PATH, config.WINDOW_SIZE)
+    layers = export_tier2(tier2_model_path, config.WINDOW_SIZE)
 
     mismatches = []
     for idx in range(_N_WINDOWS):
@@ -88,8 +98,6 @@ def test_paci_infer_t2_s8_reports_bufsize_when_scratch_too_small():
     paci_core_tiny_scratch build (16-byte scratch, CMakeLists.txt) and
     confirm paci_infer_t2_s8 returns PACI_E_BUFSIZE instead of overrunning
     the buffer."""
-    _require_fixture_model()
-
     candidates = [
         os.path.join(_PROJECT_ROOT, "build", "paci_core", name)
         for name in ("libpaci_core_tiny_scratch.dll", "libpaci_core_tiny_scratch.so")

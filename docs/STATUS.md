@@ -512,6 +512,52 @@ fixture references in `outputs/reports/`, `outputs/bench/`, or `README.md`.
 **Phase 2 complete** (G2.0 through G2.5). Remaining before Phase 3: none —
 Phase 3 (measurement harness) is next.
 
+## GATE 3.0 — carry-forward from Phase 2 (2026-08-12)
+
+**`outputs/models/requant_sites.json`** (`tools/write_requant_sites.py`):
+every requantization site in both models, ordered, with
+`accumulation_depth` (`conv: HK*WK*C_IN`, `pool: PACI_WINDOW_SIZE`,
+`FC: C_IN`), `input_scale`/`output_scale`, and `weight_bits`. Phase 5 reads
+this file rather than re-deriving the same numbers a second time.
+
+**Per-channel Dense reconciled with CMSIS-NN's per-tensor INT4 FC
+signature** (first documented in GATE 2.3/2.4's Tier-1 section; restated
+here per Task 3.0b's explicit ask for the assumption this reconciliation
+depends on): `tier1_logits`' INT8 baseline is per-channel quantized (2
+scales, one per output class), but `arm_fully_connected_s4` only accepts
+`cmsis_nn_per_tensor_quant_params` — there is no per-channel INT4 FC kernel
+in this CMSIS-NN checkout. The reconciliation
+(`requantize_to_int4_per_tensor` in `tools/export_cmsisnn.py`) dequantizes
+each output channel through its own INT8-baseline scale back to float,
+then finds a SINGLE new int4 scale sized to the max magnitude across the
+WHOLE weight tensor (not per channel), so every channel shares one int4
+scale regardless of how differently-scaled its channel was in the INT8
+baseline.
+
+**The assumption this depends on**: the TFLite converter chose per-channel
+quantization for this tensor because different output channels' weight
+distributions have measurably different magnitudes (if they didn't, a
+per-tensor scale would have been just as good and the converter's own
+calibration would have picked something close to it anyway). Collapsing to
+one shared int4 scale means whichever channel has the SMALLEST weight
+magnitude gets proportionally coarser 4-bit resolution than it would under
+its own per-channel scale, since the shared scale is sized to the LARGEST
+channel's magnitude. This is a real, not merely theoretical, precision
+cost — it has NOT been measured yet (Tier-1 fixture accuracy is entirely
+out of scope until Phase 4 retrains on the severity-laddered dataset); it
+is flagged here as a known, accepted risk of the per-tensor reconciliation,
+not a validated non-issue. If Phase 4's Tier-1 accuracy comes in
+surprisingly low, this reconciliation is the first place to look.
+
+**Oracle tests parameterised by model path** (`tests/conftest.py`):
+`--tier1-model`/`--tier2-model` pytest CLI options, defaulting to the
+fixture `.tflite` paths. `tests/test_export_cmsisnn.py`,
+`tests/test_infer_t1.py`, `tests/test_infer_t2.py` all take the path via a
+fixture instead of a hardcoded module-level constant, so re-verifying
+against the Stage-B release models (once Phase 4 trains them) is
+`pytest tests/ --tier1-model=... --tier2-model=...`, one command, not a
+source edit.
+
 ## Two-stage model plan (fixture vs release)
 
 Per project-owner instruction: train fixture models now (throwaway weights,

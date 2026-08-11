@@ -25,15 +25,12 @@ from phase4_tinyml.dataset import generate_cnn_dataset  # noqa: E402
 from tools import ref_cmsisnn as ref  # noqa: E402
 from tools.export_cmsisnn import TFLiteGraph, export_tier2, find_ops  # noqa: E402
 
-_TFLITE_PATH = os.path.join(_PROJECT_ROOT, "outputs", "models", "tier2_fixture.tflite")
 _N_WINDOWS = 200
 
 
-def _require_fixture_model():
-    if not os.path.isfile(_TFLITE_PATH):
-        pytest.skip(
-            f"{_TFLITE_PATH} not found. Run `python tools/train_fixture_models.py` first."
-        )
+def _require_model(path):
+    if not os.path.isfile(path):
+        pytest.skip(f"{path} not found. Run `python tools/train_fixture_models.py` first.")
 
 
 def _run_reference_pipeline(window_int8, layers):
@@ -65,8 +62,8 @@ def _run_reference_pipeline(window_int8, layers):
     )
 
 
-def test_tier2_reference_pipeline_matches_tflite_interpreter_exactly():
-    _require_fixture_model()
+def test_tier2_reference_pipeline_matches_tflite_interpreter_exactly(tier2_model_path):
+    _require_model(tier2_model_path)
     import tensorflow as tf
 
     physics = PhysicsModel()
@@ -75,7 +72,7 @@ def test_tier2_reference_pipeline_matches_tflite_interpreter_exactly():
     )
     assert len(X_test) >= _N_WINDOWS, f"only {len(X_test)} test windows available, need {_N_WINDOWS}"
 
-    interp = tf.lite.Interpreter(model_path=_TFLITE_PATH, experimental_preserve_all_tensors=True)
+    interp = tf.lite.Interpreter(model_path=tier2_model_path, experimental_preserve_all_tensors=True)
     interp.allocate_tensors()
     inp_detail = interp.get_input_details()[0]
     in_scale, in_zp = inp_detail["quantization"]
@@ -87,11 +84,11 @@ def test_tier2_reference_pipeline_matches_tflite_interpreter_exactly():
     # search and got a shape-[5] constant instead of the real per-window
     # logits tensor. The output of the LAST FULLY_CONNECTED op is
     # unambiguous.
-    graph = TFLiteGraph(_TFLITE_PATH)
+    graph = TFLiteGraph(tier2_model_path)
     last_fc_op_idx = find_ops(graph, "FULLY_CONNECTED")[-1]
     logits_tensor_idx = graph.op(last_fc_op_idx).Outputs(0)
 
-    layers = export_tier2(_TFLITE_PATH, config.WINDOW_SIZE)
+    layers = export_tier2(tier2_model_path, config.WINDOW_SIZE)
 
     mismatches = []
     for idx in range(_N_WINDOWS):
