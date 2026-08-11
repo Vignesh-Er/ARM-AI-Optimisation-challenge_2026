@@ -32,7 +32,9 @@ def _find_shared_lib():
     )
 
 
-PACI_WINDOW_SIZE = 32
+# Must track paci_core/include/paci_core.h's PACI_WINDOW_SIZE exactly —
+# frozen at 64 by tools/probe_window.py (Task 2.0); see docs/STATUS.md.
+PACI_WINDOW_SIZE = 64
 PACI_N_CLASSES = 5
 
 # paci_status_t

@@ -208,13 +208,145 @@ Printed in full to console at the end of the run per section 9.
   — round-half-up, confirming the bias-budget analysis in Phase 5 has real
   ground to stand on.
 
-Remaining Phase 2 work (not yet started): train the Tier-1 2-class INT4
-screen and Tier-2 5-class INT8 classifier in `phase4_tinyml/`, write
+## Phase 2 (continued) — Task 2.0-2.2 progress (2026-08-11)
+
+- **Task 2.0 (window probe)**: added a `k` severity multiplier to
+  `phase1_physics/synthetic_data.py:inject_fault()`/`generate_full_dataset()`.
+  k=1.0 reproduces the original fixed-magnitude gas_leak/equipment_drift/
+  unexpected_deviation faults byte-for-byte against a captured pre-edit
+  baseline (`tests/golden/synthetic_data_baseline.npz`,
+  `tests/test_fault_injection_k1_matches_baseline.py`). `sensor_fault` was
+  deliberately redefined from flatline-to-0.0 (a ~125-sigma jump, physically
+  implausible for a stuck sensor) to stuck-at-last-reading, per instruction
+  — this is NOT byte-for-byte equivalent at any k, including k=1.0, and the
+  test documents that as the one intentional exception. Regenerated
+  `tests/golden/ekf_trace_seed42.json` afterward since the dataset generator
+  it was recorded against changed (not a paci_core regression — confirmed
+  by re-running the full test suite, 19/19 pass).
+  - First sweep run produced a **meaningless result**: window=64 and
+    window=128 both came back at a trivial 1.0 "balanced accuracy" with
+    100%-Normal predictions. Root cause: `tools/probe_window.py` initially
+    reused `n_steps_per=500` at every window size, but
+    `generate_full_dataset`'s `fault_duration = max(20, n_steps_per // 20)`
+    depends only on `n_steps_per`, not window size, and `extract_windows`
+    labels each window by **majority vote**. At `n_steps_per=500`,
+    `fault_duration=25`, which is under 50% of a 64- or 128-sample window,
+    so no window could ever get a nonzero majority label — every window in
+    those cells was labeled Normal by construction, not because the fault
+    was undetectable. Fixed by scaling `n_steps_per = 20 * window_size` so
+    `fault_duration` tracks `window_size` across the sweep. Flagging this
+    for Phase 4: the real severity ladder needs to choose fault durations
+    deliberately relative to whatever `PACI_WINDOW_SIZE` ends up frozen at,
+    not inherit whatever `n_steps_per` happens to be used elsewhere.
+  - Sweep re-running with the fix; decision + `outputs/probe/window_sweep.json`
+    to follow in the next STATUS.md update.
+- **Task 2.2 (INT4 export probe)**: ran `tools/probe_int4.py` against
+  `tensorflow==2.21.0`. Setting the converter's low-bit-QAT attribute is
+  accepted (`used_int4_api=True`) but the converted flatbuffer's tensor
+  types are only `{INT32, INT8}` — **no INT4 tensors emitted**. Matches the
+  brief's expectation (tensorflow/tensorflow#64193). Taking the fallback
+  branch: Tier-1 converts to standard full-integer INT8, and
+  `tools/export_cmsisnn.py` (Task 2.3) re-quantizes the designated layers to
+  4-bit symmetric per-channel on top of that.
+  - The int4 nibble pack/unpack order was **verified from CMSIS-NN's own
+    test-vector generator**, not derived by reading the DSP/MVE unpack
+    intrinsics (`read_and_pad_s4` in `Include/arm_nnsupportfunctions.h`,
+    which is a SIMD register-loading shuffle, not the wire format):
+    `third_party/CMSIS-NN/Tests/UnitTest/conv_settings.py:299-300` (identical
+    in `fully_connected_settings.py:212-213`) packs
+    `(0xf0 & (v1 << 4)) | (v0 & 0xf)` — even index in the low nibble, odd
+    index in the high nibble. Implemented in `tools/int4_pack.py`, round-trip
+    tested in `tests/test_int4_packing.py` (full int4 range + 5 random
+    seeds + the exact byte value for a known pair + rejection of odd-length/
+    out-of-range input) — 10/10 pass.
+
+## GATE 2.0 — window size frozen (2026-08-11)
+
+Amendments applied before Task 2.1 (project-owner instruction):
+
+**A. Labeling rule.** `phase4_tinyml/dataset.py:extract_windows()` gained a
+`rule` parameter: `"last"` (new default, `y[i] = labels[i + window_size - 1]`,
+the label of the most recent sample) and `"majority"` (the original scheme,
+kept reachable only so the sweep could report both columns once as evidence).
+`"last"` is used everywhere from this point on. **Why:** the deployed cascade
+never sees future samples — `paci_step` only ever knows "now" and everything
+before it — so `"last"` is what the model is actually trained to replicate.
+It's also the only rule under which Phase 4's detection-latency metric is
+coherent: `"majority"` only labels a window "faulty" once the fault already
+covers half the window, which silently adds `window_size / 2` steps of
+phantom latency having nothing to do with detection quality. **Phase 4's
+detection-latency definition must use `"last"` too, or the metric measured
+there is not the same thing this window-size decision was calibrated
+against.**
+
+**B. Decision rule**, replacing the earlier fixed-0.75-threshold version:
+smallest `W` in `{32,64,128}` such that balanced accuracy at `k=0.1` for `2W`
+exceeds `W` by less than 5 points (i.e. doubling stops paying for itself).
+
+**C. `tools/ref_cmsisnn.py` directed test cases** (`tests/test_requantize_matches_cmsisnn.py`):
+exact-tie construction (`make_tie_case`) for 40 shift values (`-20..19`), 100
+positive-odd-R cases each mirrored to negative (200+/shift, 54 tests total,
+all passing against the real compiled `arm_nn_requantize`), plus a
+sign-asymmetry invariant check (`result(R) + result(-R) == 1`, the
+round-toward-+infinity signature — a magnitude-symmetric scheme would give
+0). `tools/probe_requantize_bias.py` emits `outputs/probe/requantize_bias.json`
+for Phase 5 to import. First version of that script used independently
+random `(val, multiplier, shift)`, which let the "exact value" reach ~1e12
+(unrealistic — real CMSIS-NN multiplier/shift pairs are calibrated together,
+not independent) and reported a meaningless ~1e12 "bias"; fixed by deriving
+shift from val/multiplier so the exact value lands near a representative
+magnitude. **Finding, not assumed**: the bulk (mostly non-tie) population
+bias is ~0.001-0.002, close to zero — NOT +0.5. This does not contradict the
+deterministic +0.5-at-ties result; the function is two sequential shifts
+(floor, then round-half-up) whose opposite directional biases cancel for a
+generic fractional remainder, leaving the full +0.5 asymmetry visible only
+at exact ties. **Phase 5's bias budget must anchor on the tie-conditional
++0.5, not the bulk mean** — the bulk mean understates risk for any
+computation whose remainder distribution isn't close to uniform. Full
+reasoning is in the JSON's own `note` field (`docs never contain a
+hand-typed number` — Phase 5 reads the file, not a paraphrase of it here).
+
+**Window sweep results** (`outputs/probe/window_sweep.json`, `"last"` rule,
+`k=0.1`, the decision severity): window=32 → 22.7% balanced accuracy,
+window=64 → 28.6%, window=128 → 30.7%. Improvement 64→128 is 2.0 points,
+under the 5-point margin, so **PACI_WINDOW_SIZE = 64** — set in `config.py`,
+`paci_core.h`'s `#define` (with an `// ASSUMPTION:` comment at the decision
+site — this supersedes the original brief's illustrative `32`), and
+`paci_params.h` regenerated. All window-size-dependent tests
+(`tests/paci_ctypes.py`, `tests/test_ring_buffer.py`) updated to reference
+the frozen constant rather than a hardcoded `32`; full suite re-verified
+(82/82 pass) after the change.
+
+**Honest caveat, not smoothed over**: absolute detection quality at k=0.1 is
+weak across every window size — per-class recall at window=64/k=0.1 is
+`[0.994, 0.0, 0.0, 0.437, 0.0]` (Normal, Sensor Fault, Gas Leak, Equipment
+Drift, Unexpected Deviation): the classifier detects almost nothing at 10%
+of the original fault magnitude except partial Equipment Drift. The decision
+rule is about *diminishing returns from a larger window*, not an absolute
+performance bar, so procedurally the window=64 choice stands — but Phase 4's
+severity ladder should not assume k=0.1 is an achievable "hard end" for
+every fault class with this window/architecture; it may need a shallower
+floor for Sensor Fault/Gas Leak/Unexpected Deviation specifically, informed
+by this same sweep data rather than picked arbitrarily.
+
+Remaining Phase 2 work: train the Tier-1/Tier-2 *fixture* models (throwaway
+weights, frozen shapes at window=64 — see the two-stage plan below), write
 `tools/export_cmsisnn.py` (G7: per-channel multiplier/shift lifted exactly
 from the TFLite flatbuffer, verified bit-exact against the TFLite
 interpreter on 200 held-out windows), implement `paci_infer_t1_s4()` /
-`paci_infer_t2_s8()` in `paci_core/`, and the G6 (scratch buffer sizing) and
-G10 (int4 packing round-trip) tests.
+`paci_infer_t2_s8()` in `paci_core/`, and the G6 (scratch buffer sizing) test.
+
+## Two-stage model plan (fixture vs release)
+
+Per project-owner instruction: train fixture models now (throwaway weights,
+permanent shapes) to unblock the exporter/packing/buffer-sizing/bit-exact
+tests, which all depend on dimensions rather than accuracy. Release models
+(same architecture, retrained on Phase 4's severity-laddered dataset) come
+later with no C changes required, by construction. Fixture artifacts are
+named `*_fixture.tflite`/`*_fixture.h`; release artifacts `*_release.*`.
+`tools/check_no_fixture_in_results.py` greps `outputs/reports/`,
+`outputs/bench/`, and `README.md` for "fixture" and fails the build if found
+— a fixture number must never reach a results artifact.
 
 ## Blockers
 

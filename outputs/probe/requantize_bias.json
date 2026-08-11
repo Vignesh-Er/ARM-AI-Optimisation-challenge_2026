@@ -1,0 +1,30 @@
+{
+  "n_samples": 50000,
+  "seed": 12345,
+  "val_range": [
+    -16777216,
+    16777216
+  ],
+  "multiplier_range": [
+    268435456,
+    2147483648
+  ],
+  "shift_derivation": "shift chosen per-sample via _realistic_shift() so the exact value lands near 2**9",
+  "overall": {
+    "n": 50000,
+    "mean_signed_error": -3.195382343683832e-05,
+    "std_signed_error": 0.28835090316888173
+  },
+  "nonnegative_val_population": {
+    "n": 24881,
+    "mean_signed_error": -0.0016987731582557013,
+    "std_signed_error": 0.2884438799309584
+  },
+  "negative_val_population": {
+    "n": 25119,
+    "mean_signed_error": 0.001619072565735825,
+    "std_signed_error": 0.2882492760110646
+  },
+  "exact_tie_signed_error": 0.5,
+  "note": "signed_error = actual_int_result - exact_real_value, where exact_real_value = (val*multiplier) / 2**(31-shift), i.e. no rounding. Two distinct findings, not one: (1) AT AN EXACT TIE (tests/test_requantize_matches_cmsisnn.py: make_tie_case, test_tie_sign_asymmetry_matches_compiled_function), signed_error is DETERMINISTICALLY exactly +0.5 regardless of the sign of val, because CMSIS_NN_USE_SINGLE_ROUNDING's round-half-up always rounds toward +infinity, not away from zero -- not a magnitude-symmetric scheme. (2) the nonnegative_val_population / negative_val_population fields below, measured over a broad population of REALISTIC, mostly non-tie (val, multiplier, shift) triples (see _realistic_shift: shift is derived from val and multiplier so the exact value lands near a representative pre-clamp magnitude, not sampled independently -- independent sampling let earlier versions of this script hit int32 wraparound and report a meaningless ~1e12 'bias'), come out close to ZERO (~1e-3), not +0.5. This is expected, not a contradiction of (1): the function is a TWO-stage shift-and-round (new_val >> (total_shift-1), a floor/round-toward -infinity, then (result+1)>>1, a round-half-up/round-toward +infinity); for a generic (non-tie) fractional remainder these two opposing directional biases largely cancel in expectation, and only the measure-nonzero-in-practice EXACT TIE subset (where the first stage's floor is already exact, leaving only the second stage's asymmetry) shows the full +0.5. Phase 5's bias budget must use the TIE-conditional bias (finding 1), not the bulk population mean (finding 2), as its worst-case anchor -- the bulk mean understates the risk for any computation whose remainder distribution isn't close to uniform (e.g. concentrated near a tie boundary by a repeated weight/activation pattern)."
+}

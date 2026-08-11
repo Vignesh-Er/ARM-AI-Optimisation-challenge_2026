@@ -23,8 +23,24 @@ endif()
 # (Phase 3) and tests/ (Phase 1+) are added here as each phase lands.
 # Guarded with EXISTS so a partial checkout at any phase boundary still
 # configures cleanly.
+if(EXISTS "${CMAKE_SOURCE_DIR}/third_party/CMSIS-NN/Source")
+    add_subdirectory(third_party)
+endif()
+
 if(EXISTS "${CMAKE_SOURCE_DIR}/paci_core/CMakeLists.txt")
     add_subdirectory(paci_core)
+endif()
+
+# arm_nn_requantize (Include/arm_nnsupportfunctions.h) is header-only
+# (__STATIC_FORCEINLINE), so this shim needs only the include path, no
+# CMSIS-NN sources to link. Exists purely so tools/ref_cmsisnn.py's Python
+# reimplementation of the requantizer can be cross-checked against the real
+# compiled CMSIS-NN arithmetic (tests/test_requantize_matches_cmsisnn.py) —
+# not shipped, not part of paci_core's public build output.
+if(EXISTS "${CMAKE_SOURCE_DIR}/third_party/CMSIS-NN/Include/arm_nnsupportfunctions.h")
+    add_library(requantize_shim SHARED tools/native/requantize_shim.c)
+    target_include_directories(requantize_shim PRIVATE third_party/CMSIS-NN/Include)
+    target_compile_definitions(requantize_shim PRIVATE CMSIS_NN_USE_SINGLE_ROUNDING)
 endif()
 
 if(PACI_BUILD_BENCH AND EXISTS "${CMAKE_SOURCE_DIR}/bench/CMakeLists.txt")

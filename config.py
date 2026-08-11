@@ -66,7 +66,10 @@ GAS_FLOW_RANGE = (60.0, 140.0)     # sccm
 # ─────────────────────────────────────────────
 # CNN / TinyML
 # ─────────────────────────────────────────────
-WINDOW_SIZE = 32              # 1-D CNN input window length
+WINDOW_SIZE = 64              # 1-D CNN input window length — frozen by
+                                # tools/probe_window.py (Task 2.0); see
+                                # outputs/probe/window_sweep.json and
+                                # docs/STATUS.md for the sweep + decision.
 N_CLASSES = 5
 NORM_SCALE = 50.0              # CNN input normalization: (measured - ETCH_RATE_NOMINAL) / NORM_SCALE
                                 # single source of truth for both phase4_tinyml/dataset.py

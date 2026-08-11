@@ -10,7 +10,17 @@
 extern "C" {
 #endif
 
-#define PACI_WINDOW_SIZE   32
+// ASSUMPTION: the original build brief's exact header text (section 8) hard
+// codes PACI_WINDOW_SIZE as 32, but Phase 2 Task 2.0 explicitly instructed
+// determining this value empirically via tools/probe_window.py and "setting
+// PACI_WINDOW_SIZE in config.py from the decision rule" (GATE 2.0) — treated
+// as the later, more specific instruction superseding the illustrative 32 in
+// the original contract. The sweep (outputs/probe/window_sweep.json)
+// selected 64: doubling from 64 to 128 improved balanced accuracy at the
+// decision severity (k=0.1) by only 2.0 points, under the 5-point margin
+// the decision rule requires to justify the larger window/ring/RAM/compute
+// cost. See docs/STATUS.md for the full sweep and the decision rule.
+#define PACI_WINDOW_SIZE   64
 #define PACI_N_CLASSES     5
 
 typedef enum {

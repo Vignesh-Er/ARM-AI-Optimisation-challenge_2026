@@ -1,10 +1,14 @@
 # SPDX-License-Identifier: Apache-2.0
 """D2/D3 regression tests: the original Core/Src/main_cascade.c wrote
 sensor_buffer[buffer_index % WINDOW_SIZE] and passed sensor_buffer straight
-to inference (rotated/time-scrambled unless buffer_index % 32 == 0), and
-buffer_index was uint8_t (wraps at 256, silently skipping 31 windows every
-256 steps instead of once at start-up). These tests fail against that old
-behaviour and pass against paci_core/src/paci_ring.c.
+to inference (rotated/time-scrambled unless buffer_index % WINDOW_SIZE == 0),
+and buffer_index was uint8_t (wraps at 256, silently skipping
+WINDOW_SIZE - 1 windows every 256 steps instead of once at start-up). These
+tests fail against that old behaviour and pass against paci_core/src/paci_ring.c.
+
+Uses PACI_WINDOW_SIZE from paci_ctypes (64, frozen by tools/probe_window.py,
+Task 2.0) rather than a hardcoded 32, so this stays correct if the window
+size is ever revisited.
 """
 import ctypes
 
@@ -13,6 +17,7 @@ import pytest
 from paci_ctypes import (
     PACI_E_UNPRIMED,
     PACI_OK,
+    PACI_WINDOW_SIZE,
     PaciCtx,
     PaciResult,
     PaciRing,
@@ -26,16 +31,16 @@ def lib():
     return load_lib()
 
 
-@pytest.mark.parametrize("phase", [0, 1, 5, 17, 31, 32, 63])
+@pytest.mark.parametrize("phase", [0, 1, 5, PACI_WINDOW_SIZE - 1, PACI_WINDOW_SIZE, 2 * PACI_WINDOW_SIZE - 1])
 def test_ring_linearises_chronologically_at_arbitrary_phase(lib, phase):
-    """D2: fill with a ramp 0..31 at an arbitrary phase; the linearised
-    window must be exactly the ramp, oldest-first, regardless of where in
-    the physical buffer the ramp happened to start."""
+    """D2: fill with a ramp 0..WINDOW_SIZE-1 at an arbitrary phase; the
+    linearised window must be exactly the ramp, oldest-first, regardless of
+    where in the physical buffer the ramp happened to start."""
     ring = PaciRing()
     for _ in range(phase):
         lib.paci_ring_push(ctypes.byref(ring), ctypes.c_int8(-1))
 
-    ramp = list(range(32))
+    ramp = list(range(PACI_WINDOW_SIZE))
     for v in ramp:
         lib.paci_ring_push(ctypes.byref(ring), ctypes.c_int8(v))
 
@@ -47,7 +52,8 @@ def test_ring_linearises_chronologically_at_arbitrary_phase(lib, phase):
 
 def test_unprimed_count_over_1000_steps(lib):
     """D3: buffer_index must not be a uint8_t that wraps at 256. Over 1000
-    steps, exactly the first 31 windows (total < 32) are unprimed."""
+    steps, exactly the first WINDOW_SIZE - 1 windows (total < WINDOW_SIZE)
+    are unprimed."""
     ctx = PaciCtx()
     out = PaciResult()
 
@@ -64,4 +70,4 @@ def test_unprimed_count_over_1000_steps(lib):
         if read_status == PACI_E_UNPRIMED:
             skipped += 1
 
-    assert skipped == 31
+    assert skipped == PACI_WINDOW_SIZE - 1
