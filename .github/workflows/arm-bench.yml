@@ -60,8 +60,8 @@ jobs:
       - name: Generate fixture models & CMSIS-NN weight headers
         run: |
           python tools/train_fixture_models.py
-          python tools/export_cmsisnn.py --prefix tier1
-          python tools/export_cmsisnn.py --prefix tier2
+          python tools/export_cmsisnn.py outputs/models/tier1_fixture.tflite paci_core/include/tier1_weights.h --prefix tier1
+          python tools/export_cmsisnn.py outputs/models/tier2_fixture.tflite paci_core/include/tier2_weights.h --prefix tier2
 
       - name: Configure CMake
         run: |
