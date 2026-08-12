@@ -121,8 +121,9 @@ def inject_fault(data, fault_type, start_step, duration, seed=SEED, k=1.0):
 
     elif fault_type == 'gas_leak':
         # Drop gas flow
-        data['params']['gas_flow'][start_step:end_step] *= (1.0 - k * GAS_LEAK_FLOW_DROP)
-
+        drop_factor = (1.0 - GAS_LEAK_FLOW_DROP) if k == 1.0 else (1.0 - k * GAS_LEAK_FLOW_DROP)
+        data['params']['gas_flow'][start_step:end_step] *= drop_factor
+        
         # Recalculate true and measured
         model = PhysicsModel()
         x = data['true_etch_rate'][start_step-1] if start_step > 0 else model.nominal_rate
@@ -150,14 +151,15 @@ def inject_fault(data, fault_type, start_step, duration, seed=SEED, k=1.0):
 
     elif fault_type == 'equipment_drift':
         for i in range(start_step, end_step):
-            drift_factor = 1.0 + k * DRIFT_RATE * (i - start_step)
+            drift_factor = (1.0 + DRIFT_RATE * (i - start_step)) if k == 1.0 else (1.0 + k * DRIFT_RATE * (i - start_step))
             data['true_etch_rate'][i] *= drift_factor
             data['measured_etch_rate'][i] = data['true_etch_rate'][i] + np.random.normal(0, SENSOR_NOISE_STD)
         data['labels'][start_step:end_step] = 3
 
     elif fault_type == 'unexpected_deviation':
         for i in range(start_step, end_step):
-            data['measured_etch_rate'][i] += np.random.normal(0, SENSOR_NOISE_STD * k * UNEXPECTED_DEVIATION_MAGNITUDE)
+            noise_std = (SENSOR_NOISE_STD * UNEXPECTED_DEVIATION_MAGNITUDE) if k == 1.0 else (SENSOR_NOISE_STD * k * UNEXPECTED_DEVIATION_MAGNITUDE)
+            data['measured_etch_rate'][i] += np.random.normal(0, noise_std)
         data['labels'][start_step:end_step] = 4
 
     return data

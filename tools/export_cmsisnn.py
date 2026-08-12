@@ -123,7 +123,7 @@ def per_channel_multiplier_shift(scales, output_scale):
     weight_scale[c]) so this just divides by output_scale and quantizes."""
     mults, shifts = [], []
     for s in scales:
-        m, sh = quantize_multiplier(s / output_scale)
+        m, sh = quantize_multiplier(float(s) / float(output_scale))
         mults.append(m)
         shifts.append(sh)
     return mults, shifts
@@ -140,9 +140,9 @@ def export_conv_layer(graph, op_idx, name):
     weight_q = graph.tensor_quant(weight_idx)
     output_q = graph.tensor_quant(output_idx)
 
-    input_scale = input_q["scales"][0]
-    output_scale = output_q["scales"][0]
-    effective_scales = [input_scale * ws for ws in weight_q["scales"]]
+    input_scale = float(input_q["scales"][0])
+    output_scale = float(output_q["scales"][0])
+    effective_scales = [input_scale * float(ws) for ws in weight_q["scales"]]
     multipliers, shifts = per_channel_multiplier_shift(effective_scales, output_scale)
 
     return {
@@ -174,10 +174,10 @@ def export_dense_layer(graph, op_idx, name):
     weight_q = graph.tensor_quant(weight_idx)
     output_q = graph.tensor_quant(output_idx)
 
-    input_scale = input_q["scales"][0]
-    output_scale = output_q["scales"][0]
+    input_scale = float(input_q["scales"][0])
+    output_scale = float(output_q["scales"][0])
     is_per_channel = len(weight_q["scales"]) > 1
-    effective_scales = [input_scale * ws for ws in weight_q["scales"]]
+    effective_scales = [input_scale * float(ws) for ws in weight_q["scales"]]
     multipliers, shifts = per_channel_multiplier_shift(effective_scales, output_scale)
 
     return {
@@ -299,9 +299,9 @@ def export_conv_layer_s4(graph, op_idx, name):
     packed_weight = _pack_or_raise(int4_weight, name)
     rescaled_bias = _rescale_bias(bias, weight_q["scales"], int4_scales)
 
-    input_scale = input_q["scales"][0]
-    output_scale = output_q["scales"][0]
-    effective_scales = [input_scale * s4 for s4 in int4_scales]
+    input_scale = float(input_q["scales"][0])
+    output_scale = float(output_q["scales"][0])
+    effective_scales = [input_scale * float(ws) for ws in int4_scales]
     multipliers, shifts = per_channel_multiplier_shift(effective_scales, output_scale)
 
     return {

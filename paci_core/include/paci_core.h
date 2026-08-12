@@ -4,6 +4,7 @@
 
 #include <stdint.h>
 #include <stdbool.h>
+#include <stddef.h>
 #include "paci_params.h"   // generated from config.py — do not edit by hand
 
 #ifdef __cplusplus

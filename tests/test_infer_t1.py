@@ -74,8 +74,18 @@ def _run_reference_pipeline(window_int8, layers):
 
 
 def _top2_margin(logits):
-    order = np.argsort(logits)[::-1]
-    return int(order[0]), int(logits[order[0]]) - int(logits[order[1]])
+    best = int(logits[0])
+    second = -999999
+    best_idx = 0
+    for i in range(1, len(logits)):
+        val = int(logits[i])
+        if val > best:
+            second = best
+            best = val
+            best_idx = i
+        elif val > second:
+            second = val
+    return best_idx, best - second
 
 
 def test_paci_infer_t1_s4_matches_numpy_reference_exactly(lib, tier1_model_path):

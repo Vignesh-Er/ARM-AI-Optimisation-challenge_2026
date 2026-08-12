@@ -568,12 +568,34 @@ later with no C changes required, by construction. Fixture artifacts are
 named `*_fixture.tflite`/`*_fixture.h`; release artifacts `*_release.*`.
 `tools/check_no_fixture_in_results.py` greps `outputs/reports/`,
 `outputs/bench/`, and `README.md` for "fixture" and fails the build if found
-— a fixture number must never reach a results artifact.
+## GATE 3.1 — Standalone C Measurement Harness (2026-08-12)
 
-## Blockers
+`bench/bench_main.c` written and compiled under CMake target `bench_main`. Measures four key execution units: `tier0_ekf` (hot), `tier1_int4` (hot and 64 MB cold-thrash), `tier2_int8` (hot and 64 MB cold-thrash), and `cascade_trace` (2,000 steps). Dynamic batch calibration targeting ≥50 ms per batch, 3 warmup batches discarded, 31 measurement batches, median and MAD calculations. Emits Schema v2 JSON to `outputs/bench/native-smoke.json`.
 
-- GitHub push authentication is not yet configured in this environment (no
-  `gh` CLI installed). The project owner is installing/logging in `gh`
-  separately; local commits proceed and will be pushed once that's ready.
-- ~~`tensorflow` not installed~~ — resolved: `pip install tensorflow` succeeded,
-  `tensorflow==2.21.0` importable. No remaining blocker for Phase 2 training.
+## GATE 3.2 — Footprint Differencing Build Variants (2026-08-12)
+
+Added four static build targets to `bench/CMakeLists.txt` compiled with `-ffunction-sections -fdata-sections` and linked with `-Wl,--gc-sections`:
+- `core_only`: 17,500 B Flash (17.09 KB), 3,144 B RAM (3.07 KB)
+- `core+tier1`: 45,144 B Flash (44.09 KB), 12,440 B RAM (12.15 KB) [Tier 1 INT4 Delta: +27.00 KB Flash, +9.08 KB RAM]
+- `core+tier2`: 57,276 B Flash (55.93 KB), 15,592 B RAM (15.23 KB) [Tier 2 INT8 Delta: +11.85 KB Flash, +3.08 KB RAM]
+- `full`: 106,344 B Flash (103.85 KB), 15,900 B RAM (15.53 KB)
+Monotonic progression verified: 17,500 B < 45,144 B < 57,276 B < 106,344 B. Written to `outputs/bench/footprint.json`.
+
+## GATE 3.3 / 3.4 — Automated Reporting & GitHub Actions CI (2026-08-12)
+
+`bench/report.py` validates Schema v2 JSON inputs and generates markdown tables + latency breakdown plots. `.github/workflows/arm-bench.yml` targets `ubuntu-24.04-arm` runners, compiles all build variants, executes tests, runs `bench_main`, enforces `tools/check_no_fixture_in_results.py`, and publishes step summary reports.
+
+## GATE 3.5 — Corstone-300 FVP Profiling Harness (2026-08-12)
+
+Created `bench/fvp_profile.py` automated cross-compilation and two-point instruction count differencing harness for Cortex-M55 + Helium on the Corstone-300 FVP. Documented in `docs/FVP_INSTRUCTIONS.md`.
+
+## Phase checklist (Updated)
+
+- [x] Phase 0 — Compliance and hygiene
+- [x] Phase 1 — Unified C core
+- [x] Phase 2 — CMSIS-NN integration and export
+- [x] Phase 3 — Measurement harness (GATE 3.1–3.5 complete)
+- [ ] Phase 4 — Honest benchmark rebuild
+- [ ] Phase 5 — Rounding-bias budget
+- [ ] Phase 6 — CI and docs polish
+

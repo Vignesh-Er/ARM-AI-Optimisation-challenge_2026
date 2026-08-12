@@ -2,6 +2,7 @@
 #ifndef PACI_INTERNAL_H
 #define PACI_INTERNAL_H
 
+#include <stddef.h>
 #include "paci_core.h"
 
 #ifdef __cplusplus
