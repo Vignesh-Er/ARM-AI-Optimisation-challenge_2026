@@ -44,20 +44,35 @@ paci_status_t paci_init(paci_ctx_t *ctx, float x0, float P0) {
     ctx->ekf.P = P0;
     ctx->ekf.Q = PACI_Q_VAR;
     ctx->ekf.R = PACI_R_VAR;
-    // margin_threshold is derived from the rounding-bias budget (Phase 5,
-    // section 5) once Tier 1 exists; 0 until then is inert since
-    // PACI_WAKE_MARGIN can't be reached before Phase 2 wires Tier 1.
+    // ASSUMPTION: margin_threshold is derived from the rounding-bias budget
+    // (Phase 5, section 5); 0 is a safe placeholder until then, not a
+    // meaningful value. At 0, the margin-based escalation path below is
+    // structurally wired up but never actually fires: paci_top2_margin
+    // defines margin as (top logit - runner-up), so whenever Tier 1's
+    // argmax class is 0 (normal), margin is >= 0 by construction, and
+    // "margin < 0" can only be true when the top class is already
+    // non-zero (which the class!=0 check already catches). Escalation
+    // currently only happens via Tier-1-says-anomalous or watchdog.
+    // Revisit once Phase 5 sets a real positive threshold, which will also
+    // escalate low-confidence "normal" calls that this placeholder cannot.
     ctx->margin_threshold = 0;
 
     return PACI_OK;
 }
 
-// Tier 0 (EKF + NIS gate) runs in full below. Tier 1/2 dispatch — actually
-// invoking paci_infer_t1_s4()/paci_infer_t2_s8() and advancing tier_reached
-// past PACI_TIER_0_EKF — is added in Phase 2 once those CMSIS-NN kernels
-// exist; see docs/STATUS.md. Until then this function still reports the
-// *reason* Tier 1 would be woken (NIS gate, watchdog, burn-in), which is
-// genuine Tier-0 evidence, not a stub of Tier-1/2 behaviour.
+// Tier 0 (EKF + NIS gate) runs in full below, followed by Tier 1/2
+// dispatch per section 4: an NIS-triggered wake runs Tier 1 (the cheap
+// INT4 screen) first, escalating to Tier 2 only if Tier 1 says anomalous
+// or its margin is below ctx->margin_threshold (see the ASSUMPTION above
+// paci_init — currently inert at the placeholder value 0). A watchdog-
+// triggered wake goes straight to Tier 2, bypassing Tier 1 — the whole
+// point of a forced periodic check is to catch what the coarse INT4
+// screen's resolution might miss on slow drift, so re-running Tier 1
+// first would be pointless. Both paths silently no-op (staying at
+// PACI_TIER_0_EKF) if the ring isn't primed yet (paci_ring_read returns
+// PACI_E_UNPRIMED) or the CMSIS-NN weights aren't built in
+// (PACI_E_QUANT) — there is no window to classify yet in the first case,
+// and nothing this function can do about the second.
 paci_status_t paci_step(paci_ctx_t *ctx,
                          float z,
                          float u_pressure, float u_temp,
@@ -95,6 +110,50 @@ paci_status_t paci_step(paci_ctx_t *ctx,
     } else {
         out->wake_reason = PACI_WAKE_NONE;
         ctx->steps_since_t2++;
+    }
+
+    if (out->wake_reason == PACI_WAKE_NIS) {
+        int8_t window[PACI_WINDOW_SIZE];
+        if (paci_ring_read(&ctx->ring, window) == PACI_OK) {
+            int8_t t1_class = -1;
+            int32_t t1_margin = 0;
+            if (paci_infer_t1_s4(window, &t1_class, &t1_margin) == PACI_OK) {
+                ctx->n_t1++;
+                out->tier_reached = PACI_TIER_1_INT4;
+                out->class_id = t1_class;
+                out->margin = t1_margin;
+
+                bool escalate = (t1_class != 0) || (t1_margin < ctx->margin_threshold);
+                if (escalate) {
+                    int8_t t2_class = -1;
+                    int32_t t2_margin = 0;
+                    if (paci_infer_t2_s8(window, &t2_class, &t2_margin) == PACI_OK) {
+                        ctx->n_t2++;
+                        out->tier_reached = PACI_TIER_2_INT8;
+                        out->class_id = t2_class;
+                        out->margin = t2_margin;
+                        if (t1_class == 0) {
+                            // Escalated purely on a low margin, not because
+                            // Tier 1 called it anomalous outright.
+                            out->wake_reason = PACI_WAKE_MARGIN;
+                            ctx->n_wake_margin++;
+                        }
+                    }
+                }
+            }
+        }
+    } else if (out->wake_reason == PACI_WAKE_WATCHDOG) {
+        int8_t window[PACI_WINDOW_SIZE];
+        if (paci_ring_read(&ctx->ring, window) == PACI_OK) {
+            int8_t t2_class = -1;
+            int32_t t2_margin = 0;
+            if (paci_infer_t2_s8(window, &t2_class, &t2_margin) == PACI_OK) {
+                ctx->n_t2++;
+                out->tier_reached = PACI_TIER_2_INT8;
+                out->class_id = t2_class;
+                out->margin = t2_margin;
+            }
+        }
     }
 
     if (ekf_status != PACI_OK) {
