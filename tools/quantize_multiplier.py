@@ -33,7 +33,7 @@ def quantize_multiplier(double_multiplier):
         return 0, 0
 
     q, shift = math.frexp(double_multiplier)  # double_multiplier == q * 2**shift, 0.5 <= |q| < 1
-    q_fixed = int(round(q * (1 << 31)))
+    q_fixed = int(math.copysign(math.floor(abs(q * (1 << 31)) + 0.5), q))
     assert abs(q_fixed) <= (1 << 31), f"q_fixed={q_fixed} out of range for double_multiplier={double_multiplier}"
 
     if q_fixed == (1 << 31):
