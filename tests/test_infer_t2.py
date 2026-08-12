@@ -41,8 +41,18 @@ def lib():
 
 
 def _top2_margin(logits):
-    order = np.argsort(-np.asarray(logits, dtype=np.int32), kind='stable')
-    return int(order[0]), int(logits[order[0]]) - int(logits[order[1]])
+    best = int(logits[0])
+    second = -999999
+    best_idx = 0
+    for i in range(1, len(logits)):
+        val = int(logits[i])
+        if val > best:
+            second = best
+            best = val
+            best_idx = i
+        elif val > second:
+            second = val
+    return best_idx, best - second
 
 
 def test_paci_infer_t2_s8_matches_tflite_interpreter_exactly(lib, tier2_model_path):
