@@ -20,8 +20,8 @@ concurrency:
 
 jobs:
   arm-bench:
-    name: Build, Test & Benchmark (aarch64)
-    runs-on: ubuntu-24.04-arm
+    name: Build, Test & Benchmark
+    runs-on: ubuntu-latest
 
     defaults:
       run:
@@ -38,7 +38,6 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-          cache: 'pip'
 
       - name: Install system dependencies
         run: |
@@ -66,9 +65,9 @@ jobs:
             -DPACI_BUILD_TESTS=ON \
             -DPACI_BUILD_BENCH=ON
 
-      - name: Build C binaries & footprint targets
+      - name: Build all C binaries & shared libraries
         run: |
-          cmake --build build --target bench_main core_only core+tier1 core+tier2 full --parallel
+          cmake --build build --parallel
 
       - name: Measure footprint differencing
         run: |
@@ -103,6 +102,6 @@ jobs:
         uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: aarch64-outputs
+          name: bench-outputs
           path: outputs/
           if-no-files-found: warn
