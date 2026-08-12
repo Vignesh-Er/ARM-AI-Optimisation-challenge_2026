@@ -74,7 +74,7 @@ def _run_reference_pipeline(window_int8, layers):
 
 
 def _top2_margin(logits):
-    order = np.argsort(logits)[::-1]
+    order = np.argsort(-np.asarray(logits, dtype=np.int32), kind='stable')
     return int(order[0]), int(logits[order[0]]) - int(logits[order[1]])
 
 
