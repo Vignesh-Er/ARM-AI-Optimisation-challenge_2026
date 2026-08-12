@@ -57,6 +57,12 @@ jobs:
           pip install -r requirements.txt
           pip install pytest pytest-cov
 
+      - name: Generate fixture models & CMSIS-NN weight headers
+        run: |
+          python tools/train_fixture_models.py
+          python tools/export_cmsisnn.py --prefix tier1
+          python tools/export_cmsisnn.py --prefix tier2
+
       - name: Configure CMake
         run: |
           cmake -B build -S . \

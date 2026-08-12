@@ -18,7 +18,8 @@ if(TARGET cmsisnn)
 endif()
 
 if(NOT WIN32)
-    target_link_libraries(bench_main PRIVATE m)
+    target_compile_definitions(bench_main PRIVATE _GNU_SOURCE)
+    target_link_libraries(bench_main PRIVATE m pthread)
 endif()
 
 # STEP B (GATE 3.2) - Footprint differencing build variants
@@ -111,5 +112,6 @@ if(TARGET cmsisnn)
     target_compile_definitions(full PRIVATE CMSIS_NN_USE_SINGLE_ROUNDING)
 endif()
 if(NOT WIN32)
-    target_link_libraries(full PRIVATE m)
+    target_compile_definitions(full PRIVATE _GNU_SOURCE)
+    target_link_libraries(full PRIVATE m pthread)
 endif()

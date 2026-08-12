@@ -1,4 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
+#ifndef _GNU_SOURCE
+#define _GNU_SOURCE
+#endif
+
 #include "bench_timing.h"
 
 #include <stdio.h>
@@ -6,7 +10,6 @@
 #include <time.h>
 
 #if defined(__linux__)
-#define _GNU_SOURCE
 #include <sched.h>
 #include <unistd.h>
 #define BENCH_HAVE_LINUX_SCHED 1
