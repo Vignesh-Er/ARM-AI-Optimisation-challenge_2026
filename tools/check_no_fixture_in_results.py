@@ -36,7 +36,8 @@ def find_fixture_leaks():
             try:
                 with open(path, "r", encoding="utf-8", errors="ignore") as f:
                     for lineno, line in enumerate(f, start=1):
-                        if "fixture" in line.lower():
+                        clean_line = line.lower().replace("check_no_fixture", "")
+                        if "fixture" in clean_line:
                             leaks.append((path, lineno, line.strip()))
             except (UnicodeDecodeError, OSError):
                 continue
