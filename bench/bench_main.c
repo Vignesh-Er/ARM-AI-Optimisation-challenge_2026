@@ -72,9 +72,11 @@ static void get_cpu_info(char *buf, size_t max_len) {
 // Tier 0 EKF Measurement
 // ---------------------------------------------------------------------------
 static void run_tier0_ekf_once(paci_ctx_t *ctx, float z, float p, float t, float w, float f) {
-    paci_result_t res;
-    paci_status_t status = paci_step(ctx, z, p, t, w, f, &res);
-    g_volatile_sink += (int64_t)(res.nis * 1000.0f) + (int64_t)status;
+    float pred = paci_physics_predict(p, t, w, f);
+    float nis = 0.0f;
+    paci_status_t status = paci_ekf_step(&ctx->ekf, z, pred, &nis);
+    paci_ring_push(&ctx->ring, 0);
+    g_volatile_sink += (int64_t)(nis * 1000.0f) + (int64_t)status;
 }
 
 static uint32_t calibrate_tier0_iterations(void) {
@@ -317,6 +319,16 @@ static bench_cascade_result_t measure_cascade_trace(void) {
     res.total_ns = bench_now_ns() - t0;
     res.n1 = ctx.n_t1;
     res.n2 = ctx.n_t2;
+
+    int8_t dummy_window[PACI_WINDOW_SIZE] = {0};
+    uint64_t t1 = bench_now_ns();
+    for (uint32_t i = 0; i < BENCH_TRACE_STEPS; i++) {
+        int8_t class_id = 0;
+        int32_t margin = 0;
+        paci_infer_t2_s8(dummy_window, &class_id, &margin);
+        g_volatile_sink += class_id + margin;
+    }
+    res.always_on_ns = bench_now_ns() - t1;
 
     return res;
 }

@@ -36,8 +36,9 @@ int bench_write_json(const char *path, const bench_report_t *report) {
     write_unit(f, "tier0_ekf", &report->tier0_ekf, 1);
     write_unit(f, "tier1_int4", &report->tier1_int4, 1);
     write_unit(f, "tier2_int8", &report->tier2_int8, 1);
-    fprintf(f, "    \"cascade_trace\": {\"total\": %llu, \"n1\": %u, \"n2\": %u, \"steps\": %u}\n",
+    fprintf(f, "    \"cascade_trace\": {\"total\": %llu, \"always_on\": %llu, \"n1\": %u, \"n2\": %u, \"steps\": %u}\n",
             (unsigned long long)report->cascade_trace.total_ns,
+            (unsigned long long)report->cascade_trace.always_on_ns,
             report->cascade_trace.n1, report->cascade_trace.n2, report->cascade_trace.steps);
     fprintf(f, "  }\n");
     fprintf(f, "}\n");

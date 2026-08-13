@@ -137,17 +137,19 @@ def validate_and_parse_schema_v2(data: Any) -> Dict[str, Any]:
 
     # Validate cascade_trace
     casc_dict = _validate_dict(units["cascade_trace"], "units.cascade_trace")
-    for k in ("total", "n1", "n2", "steps"):
+    for k in ("total", "always_on", "n1", "n2", "steps"):
         if k not in casc_dict:
             raise KeyError(f"Missing '{k}' in units.cascade_trace")
 
     casc_total = _validate_number(casc_dict["total"], "units.cascade_trace.total")
+    casc_always_on = _validate_number(casc_dict["always_on"], "units.cascade_trace.always_on")
     casc_n1 = _validate_int(casc_dict["n1"], "units.cascade_trace.n1")
     casc_n2 = _validate_int(casc_dict["n2"], "units.cascade_trace.n2")
     casc_steps = _validate_int(casc_dict["steps"], "units.cascade_trace.steps", min_val=1)
 
     parsed_units["cascade_trace"] = {
         "total": casc_total,
+        "always_on": casc_always_on,
         "n1": casc_n1,
         "n2": casc_n2,
         "steps": casc_steps,
@@ -297,7 +299,8 @@ def generate_markdown_report(data: Dict[str, Any]) -> str:
 
     effective_step_cost = total_time / steps
     theoretical_step_cost = t0_hot + (n1 / steps) * t1_hot + (n2 / steps) * t2_hot
-    always_on_tier2_cost = t0_hot + t2_hot
+    always_on_total_time = casc["always_on"]
+    always_on_tier2_cost = always_on_total_time / steps
 
     savings_pct = (
         ((always_on_tier2_cost - effective_step_cost) / always_on_tier2_cost * 100.0)
@@ -453,7 +456,7 @@ def generate_plots(data: Dict[str, Any], output_path: str) -> bool:
     n2 = casc["n2"]
 
     effective_cost = total_time / steps
-    always_on_cost = t0_hot + t2_hot
+    always_on_cost = casc.get("always_on", 0) / steps
 
     t0_contrib = t0_hot
     t1_contrib = (n1 / steps) * t1_hot

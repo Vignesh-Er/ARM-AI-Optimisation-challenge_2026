@@ -23,6 +23,7 @@ typedef struct {
 
 typedef struct {
     uint64_t total_ns;
+    uint64_t always_on_ns;
     uint32_t n1;
     uint32_t n2;
     uint32_t steps;
