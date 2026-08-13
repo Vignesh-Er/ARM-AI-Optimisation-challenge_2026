@@ -157,6 +157,7 @@ python tools/check_no_fixture_in_results.py
 ```
 
 ### Run Live Software Demonstration (C Core + CMSIS-NN Cascade)
+Executes an interactive 300-step demonstration over a dynamic semiconductor process sensor stream with injected fault phases (demonstrating real-time adaptive cascade gating, distinct from the canonical 2,000-step static benchmark trace):
 ```bash
 python demo_live.py
 ```
@@ -219,9 +220,9 @@ python bench/report.py outputs/bench/native-smoke.json --output-md outputs/repor
 
 ## 🎯 Target Platforms & Execution Evidence
 
-1. **x86_64 Native Development** (`gcc 13.2.0` / host environment) — *Executed & Validated in benchmark report*
-2. **aarch64 Linux** (`ubuntu-24.04-arm` GitHub Actions runner) — *Automated in CI via `.github/workflows/arm-bench.yml`*
-3. **Arm Cortex-M55 / Corstone-300 FVP + Helium MVE** — *Harness implemented via `bench/fvp_profile.py` & `docs/FVP_INSTRUCTIONS.md` (cross-compilation ready)*
+1. **x86_64 Native Development** (`gcc 13.2.0` / host environment) — *Authoritative baseline executed & validated in committed benchmark report (`outputs/bench/native-smoke.json`)*
+2. **aarch64 Linux** (`ubuntu-24.04-arm` GitHub Actions runner) — *Automated in CI via `.github/workflows/arm-bench.yml` (separate Arm-host CI verification, published to Step Summary)*
+3. **Arm Cortex-M55 / Corstone-300 FVP + Helium MVE** — *Cross-compilation & instruction differencing profiling harness implemented via `bench/fvp_profile.py` & `docs/FVP_INSTRUCTIONS.md`*
 
 ---
 

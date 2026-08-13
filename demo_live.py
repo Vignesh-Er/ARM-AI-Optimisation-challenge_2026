@@ -221,23 +221,38 @@ def run_c_cascade_demo():
     t1_pct = (n1_count / total_steps) * 100.0
     t2_pct = (n2_count / total_steps) * 100.0
     
-    # Amortized latency estimation based on native benchmark results (~0.95us vs ~106us)
-    # Baseline Always-on Tier 2 cost = total_steps * 106.0 us
-    # Realized PACI cost = n0 * 0.95 us + n1 * 22.5 us + n2 * 106.0 us
-    baseline_cost_us = total_steps * 106.0
-    realized_cost_us = (n0_count * 0.95) + (n1_count * 22.5) + (n2_count * 106.0)
+    # Amortized latency calculation using canonical Schema v3 native benchmark latencies:
+    # Tier 0 (EKF): 465.20 ns (0.4652 us), Tier 1 (INT4): 22,422.87 ns (22.4229 us), Tier 2 (INT8): 110,517.87 ns (110.5179 us)
+    # Always-On Tier 2 baseline: 122,209.20 ns/step (122.2092 us/step)
+    t0_us = 0.4652
+    t1_us = 22.42287
+    t2_us = 110.51787
+    always_on_us = 122.20920
+
+    baseline_cost_us = total_steps * always_on_us
+    realized_cost_us = (n0_count * t0_us) + (n1_count * t1_us) + (n2_count * t2_us)
     compute_reduction_pct = (1.0 - (realized_cost_us / baseline_cost_us)) * 100.0
     speedup = baseline_cost_us / realized_cost_us if realized_cost_us > 0 else 1.0
 
     banner("PACI COMPETITION DEMONSTRATION SUMMARY", C.GREEN)
 
-    print(f"  {C.BOLD}{C.WHITE}Adaptive Cascade Metrics ({total_steps} Evaluation Samples):{C.RESET}")
+    print(f"  {C.BOLD}{C.WHITE}Live 300-Step Interactive Demo Trace:{C.RESET}")
     print(f"  {C.DIM}{'─' * 60}{C.RESET}")
+    info("Workload Description", "Live dynamic sensor stream with injected fault phases")
     info("Total Samples Processed", f"{total_steps:,}")
     info("Tier 0 (Physics-EKF) Filtered", f"{n0_count:,} steps", f"({cnn_avoided_pct:.1f}% CNN calls avoided)")
     info("Tier 1 (INT4 1D-CNN) Invocations", f"{n1_count:,} steps", f"({t1_pct:.1f}% escalation rate)")
     info("Tier 2 (INT8 1D-CNN) Invocations", f"{n2_count:,} steps", f"({t2_pct:.1f}% confirmation rate)")
-    info("Realized Compute Latency Reduction", f"{compute_reduction_pct:.2f}%", f"({speedup:.2f}x speedup vs Always-On INT8)")
+    info("Demo Trace Compute Reduction", f"{compute_reduction_pct:.2f}%", f"({speedup:.2f}× speedup vs Always-On INT8)")
+    print()
+
+    print(f"  {C.BOLD}{C.WHITE}Canonical 2,000-Step Benchmark Reference (Schema v3 / bench_main):{C.RESET}")
+    print(f"  {C.DIM}{'─' * 60}{C.RESET}")
+    info("Benchmark Trace Length", "2,000 deterministic steps (bench_trace.h)")
+    info("Tier 1 Invocations (N1)", "303 / 2,000", "(15.15% escalation rate)")
+    info("Tier 2 Invocations (N2)", "90 / 2,000", "(4.50% escalation rate)")
+    info("Canonical Compute Reduction", "90.58%", "(10.62× effective speedup)")
+    info("Effective Per-Step Latency", "11,510.15 ns/step", "(vs 122,209.20 ns/step Always-On)")
     print()
 
     print(f"  {C.BOLD}{C.WHITE}Arm Cortex-M55 / Corstone-300 FVP & CMSIS-NN Optimization Profile:{C.RESET}")
