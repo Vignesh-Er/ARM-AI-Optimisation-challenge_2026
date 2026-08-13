@@ -9,7 +9,7 @@ AVAILABLE_HARDWARE: "none"
 [![CI Status](https://img.shields.io/badge/CI-arm--bench_passing-brightgreen.svg)](.github/workflows/arm-bench.yml)
 [![Schema](https://img.shields.io/badge/Schema-v3_Schema_Validated-success.svg)](docs/BENCHMARKING.md)
 
-PACI is an ultra-low-power 3-tier adaptive cascade architecture designed for resource-constrained Arm Cortex-M embedded microcontrollers and Linux edge systems monitoring semiconductor plasma etch processes. By coupling a scalar Extended Kalman Filter (EKF) with statistical Normalized Innovation Squared (NIS) gating, PACI filters non-anomalous process drift locally before escalating to 4-bit (INT4) and 8-bit (INT8) Convolutional Neural Network (CNN) classifiers.
+PACI is a physics-informed 3-tier cascade for Arm Cortex-M that avoids unnecessary neural inference, reducing end-to-end compute by up to 90% while maintaining reference-model classification parity.
 
 ---
 
@@ -159,7 +159,7 @@ python bench/report.py outputs/bench/native-smoke.json --output-md outputs/repor
 │   ├── bench_main.c         # Standalone C measurement binary
 │   ├── bench_json.c/.h      # Schema v2 JSON generator
 │   ├── bench_timing.c/.h    # High-resolution wall-clock timing & cache thrashing
-│   ├── fvp_profile.py       # Cortex-M55 Corstone-300 FVP profiling harness
+│   ├── fvp_profile.py       # Cortex-M55 / Corstone-300 FVP profiling harness
 │   ├── footprint/           # Isolated build entrypoints for footprint differencing
 │   └── report.py            # Automated report & plot generator
 ├── docs/
@@ -201,7 +201,7 @@ python bench/report.py outputs/bench/native-smoke.json --output-md outputs/repor
 ## 🎯 Supported Hardware & Platforms
 
 1. **aarch64 Linux** (`ubuntu-24.04-arm` CI runner / native host)
-2. **Cortex-M55 + Helium** (Arm Corstone-300 FVP model via `bench/fvp_profile.py`)
+2. **Cortex-M55 / Corstone-300 FVP + Helium** (Arm Corstone-300 FVP model via `bench/fvp_profile.py`)
 
 ---
 

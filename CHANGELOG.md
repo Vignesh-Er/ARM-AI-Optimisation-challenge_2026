@@ -26,7 +26,7 @@ All notable changes and GATE milestones for the PACI-Arm project are documented 
 ### Added
 - Trained Stage-B release models (`tier1_release.tflite`, `tier2_release.tflite`) on 40 multi-scenario datasets with BatchNorm folding.
 - **Defect D6 Fixed**: Integrated real Schema v2 measured execution latencies into `phase6_benchmark/run_benchmarks.py`.
-- **Defect D7 Fixed**: Implemented realistic equipment drift severity ladder; demonstrated that Moving Average misses slow drift (75.0% detection) while PACI achieves **84.4% CNN reduction**, **100% fault detection**, and only **4.5% false wake rate**.
+- **Defect D7 Fixed**: Implemented realistic equipment drift severity ladder; demonstrated that Moving Average misses slow drift (75.0% detection) while PACI achieves **84.4% CNN reduction**, **100% classification parity with the reference model on the validated test set**, and only **4.5% false wake rate**.
 - Verified 95/95 test suite passing against release models.
 
 ---
@@ -38,7 +38,7 @@ All notable changes and GATE milestones for the PACI-Arm project are documented 
 - **GATE 3.2 (`bench/CMakeLists.txt`)**: Footprint differencing targets (`core_only`, `core+tier1`, `core+tier2`, `full`) linked with `-Wl,--gc-sections`. Recorded to `outputs/bench/footprint.json`.
 - **GATE 3.3 (`bench/report.py`)**: Automated Schema v2 report generator producing Markdown summary tables and latency breakdown plots.
 - **GATE 3.4 (`.github/workflows/arm-bench.yml`)**: CI workflow targeting `ubuntu-24.04-arm` runners with multi-target compilation, pytest verification, fixture check, and step summary publication.
-- **GATE 3.5 (`bench/fvp_profile.py` & `docs/FVP_INSTRUCTIONS.md`)**: Corstone-300 Cortex-M55 + Helium instruction count differencing harness and guide.
+- **GATE 3.5 (`bench/fvp_profile.py` & `docs/FVP_INSTRUCTIONS.md`)**: Cortex-M55 / Corstone-300 FVP + Helium instruction count differencing harness and guide.
 
 ---
 

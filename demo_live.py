@@ -7,7 +7,7 @@ Demonstrates the production C PACI cascade pipeline (paci_core) operating live
 on a synthetic semiconductor plasma etch process sensor stream via ctypes.
 
 Target Hardware / Deployment Profile:
-  - Architecture: Arm Cortex-M55 + Helium MVE
+  - Architecture: Arm Cortex-M55 / Corstone-300 FVP + Helium MVE
   - Kernels: CMSIS-NN v7.0.0 (INT4 arm_convolve_s4 & INT8 arm_convolve_wrapper_s8)
   - Memory: Static 8,192 B Scratch Arena (0 dynamic allocation)
 
@@ -118,7 +118,7 @@ def run_c_cascade_demo():
     
     banner("PACI: Physics-Informed Anomaly Classification for TinyML", C.CYAN)
     print(f"  {C.BOLD}Arm AI Optimization Challenge 2026 — Track 1: Physical AI{C.RESET}")
-    print(f"  {C.DIM}Target Hardware: Arm Cortex-M55 + Helium MVE (CMSIS-NN INT4/INT8 Kernels){C.RESET}")
+    print(f"  {C.DIM}Target Hardware: Arm Cortex-M55 / Corstone-300 FVP + Helium MVE (CMSIS-NN INT4/INT8 Kernels){C.RESET}")
     print(f"  {C.DIM}Execution Engine: Native C PACI Core (paci_step via ctypes shared library){C.RESET}")
     print()
 
@@ -240,7 +240,7 @@ def run_c_cascade_demo():
     info("Realized Compute Latency Reduction", f"{compute_reduction_pct:.2f}%", f"({speedup:.2f}x speedup vs Always-On INT8)")
     print()
 
-    print(f"  {C.BOLD}{C.WHITE}Arm Cortex-M55 & CMSIS-NN Optimization Profile:{C.RESET}")
+    print(f"  {C.BOLD}{C.WHITE}Arm Cortex-M55 / Corstone-300 FVP & CMSIS-NN Optimization Profile:{C.RESET}")
     print(f"  {C.DIM}{'─' * 60}{C.RESET}")
     ok("CMSIS-NN v7.0.0 INT4 Kernel: arm_convolve_s4 (216 B weight footprint)")
     ok("CMSIS-NN v7.0.0 INT8 Kernel: arm_convolve_wrapper_s8 (11.8 KB weight footprint)")
@@ -252,7 +252,7 @@ def run_c_cascade_demo():
     print(f"  {C.BOLD}{C.WHITE}Verification & Quality Assurance:{C.RESET}")
     print(f"  {C.DIM}{'─' * 60}{C.RESET}")
     ok("Pytest Suite: 96/96 passed (including test_tier0_equivalence.py 100-tick regression)")
-    ok("Benchmark Harness: Schema v3 validated (aarch64-linux & Cortex-M55 FVP)")
+    ok("Benchmark Harness: Schema v3 validated (aarch64-linux & Cortex-M55 / Corstone-300 FVP)")
     ok("CI Verification: README benchmark table sync enforced via tools/verify_readme.py")
     print()
 
