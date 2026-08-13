@@ -45,6 +45,7 @@ graph TD
 
 
 
+
 # PACI Benchmark Report: `x86_64-native`
 
 > Automated hardware benchmark evaluation conforming to **Schema v3** on **x86_64-native**.
@@ -55,18 +56,18 @@ Measured across **31 batches**. Initialization and setup are excluded from per-s
 
 | Tier / Execution Unit | Hot Latency (Median ± MAD) | Cold Latency (Median ± MAD) | Scratch Buffer |
 |:---|:---:|:---:|:---:|
-| **Tier 0 (EKF)** | `463.85 ± 9.68 ns` | — | N/A (0 B) |
-| **Tier 1 (INT4)** | `24023.23 ± 2149.35 ns` | `34570.00 ± 1850.00 ns` | 8,192 B (8.00 KB) |
-| **Tier 2 (INT8)** | `128953.33 ± 11323.73 ns` | `119650.00 ± 8430.00 ns` | 8,192 B (8.00 KB) |
+| **Tier 0 (EKF)** | `465.20 ± 12.22 ns` | — | N/A (0 B) |
+| **Tier 1 (INT4)** | `22422.87 ± 535.17 ns` | `27970.00 ± 1240.00 ns` | 8,192 B (8.00 KB) |
+| **Tier 2 (INT8)** | `110517.87 ± 1324.04 ns` | `130790.00 ± 6620.00 ns` | 8,192 B (8.00 KB) |
 
 ### Statistical Detail
 | Component | Mean | Min | Max | Samples |
 |:---|:---:|:---:|:---:|:---:|
-| Tier 0 Hot | 473.27 | 435.02 | 606.78 | 31 |
-| Tier 1 Hot | 24845.92 | 21458.04 | 31292.08 | 31 |
-| Tier 1 Cold | 34068.07 | 26930.00 | 40500.00 | 31 |
-| Tier 2 Hot | 128941.76 | 102144.80 | 145342.67 | 31 |
-| Tier 2 Cold | 124296.13 | 105930.00 | 150620.00 | 31 |
+| Tier 0 Hot | 463.82 | 428.57 | 514.32 | 31 |
+| Tier 1 Hot | 22548.86 | 21262.81 | 24887.45 | 31 |
+| Tier 1 Cold | 31171.61 | 25260.00 | 113320.00 | 31 |
+| Tier 2 Hot | 110854.26 | 103774.68 | 118287.45 | 31 |
+| Tier 2 Cold | 130303.55 | 112230.00 | 179810.00 | 31 |
 
 ## 2. Cascade Trace Results
 
@@ -74,16 +75,16 @@ End-to-end evaluation across standard **2,000 steps** input trace (`k=1.0` bench
 
 | Cascade Metric | Realized Value | Performance Analysis |
 |:---|:---:|:---|
-| **Total Evaluation Time** | `18.488 ms (18,487,500.0 ns)` | Cumulative trace execution time |
+| **Total Evaluation Time** | `23.020 ms (23,020,300.0 ns)` | Cumulative trace execution time |
 | **Total Steps Evaluated** | `2,000` | Standard deterministic benchmark length |
 | **Tier 1 Invocations ($N_1$)** | `303` | Escalation rate: **15.15%** (84.85% filtered by Tier 0) |
 | **Tier 2 Invocations ($N_2$)** | `90` | Escalation rate: **4.50%** (70.30% resolved by Tier 1) |
-| **Effective Per-Step Latency** | `9243.75 ns/step` | Realized amortized execution cost per sample |
-| **Always-On Tier 2 Baseline** | `105216.90 ns/step` | Un-gated Tier 2 execution on every step |
-| **Compute Latency Reduction** | **91.21%** | Relative savings vs Always-On Tier 2 baseline |
-| **Effective Speedup Factor** | **11.38×** | Realized acceleration from adaptive tri-tier gating |
+| **Effective Per-Step Latency** | `11510.15 ns/step` | Realized amortized execution cost per sample |
+| **Always-On Tier 2 Baseline** | `122209.20 ns/step` | Un-gated Tier 2 execution on every step |
+| **Compute Latency Reduction** | **90.58%** | Relative savings vs Always-On Tier 2 baseline |
+| **Effective Speedup Factor** | **10.62×** | Realized acceleration from adaptive tri-tier gating |
 
-> **Note:** The PACI cascade reduces computational work by 91.2%, providing a strong proxy for reduced dynamic compute energy.
+> **Note:** The PACI cascade reduces computational work by 90.6%, providing a strong proxy for reduced dynamic compute energy.
 
 ## 3. Memory & Static Footprint
 
@@ -102,6 +103,7 @@ End-to-end evaluation across standard **2,000 steps** input trace (`k=1.0` bench
 | **Measurement Batches** | `31` |
 | **Schema Version** | `v3` |
 | **Harness Notes** | Hot and cold cache latency in ns. Cold numbers use 64MB thrashing. |
+
 
 
 
@@ -157,14 +159,14 @@ python bench/report.py outputs/bench/native-smoke.json --output-md outputs/repor
 │   └── arm-bench.yml        # GitHub Actions CI workflow (ubuntu-24.04-arm)
 ├── bench/
 │   ├── bench_main.c         # Standalone C measurement binary
-│   ├── bench_json.c/.h      # Schema v2 JSON generator
+│   ├── bench_json.c/.h      # Schema v3 JSON generator
 │   ├── bench_timing.c/.h    # High-resolution wall-clock timing & cache thrashing
 │   ├── fvp_profile.py       # Cortex-M55 / Corstone-300 FVP profiling harness
 │   ├── footprint/           # Isolated build entrypoints for footprint differencing
 │   └── report.py            # Automated report & plot generator
 ├── docs/
 │   ├── STATUS.md            # Complete phase & GATE engineering log
-│   ├── BENCHMARKING.md      # Schema v2 benchmark specification
+│   ├── BENCHMARKING.md      # Schema v3 benchmark specification
 │   ├── FVP_INSTRUCTIONS.md  # Corstone-300 FVP instruction profiling guide
 │   └── ROUNDING_BIAS_BUDGET.md # CMSIS-NN single-rounding bias analysis
 ├── paci_core/               # Production C Library
@@ -175,7 +177,7 @@ python bench/report.py outputs/bench/native-smoke.json --output-md outputs/repor
 ├── phase4_tinyml/           # CNN models, dataset generators, and training scripts
 ├── third_party/             # Vendored CMSIS-NN (v7.0.0) and CMSIS-DSP (v1.17.1)
 ├── tools/                   # TFLite exporter, int4 quantizer, requantizer probes
-├── tests/                   # 95 pytest unit/integration/ctypes verification tests
+├── tests/                   # 96 pytest unit/integration/ctypes verification tests
 ├── CHANGELOG.md             # GATE completion log
 ├── CONTRIBUTING.md          # Coding standards & contribution rules
 └── LICENSE                  # Apache-2.0 License
@@ -192,9 +194,9 @@ python bench/report.py outputs/bench/native-smoke.json --output-md outputs/repor
 | **D3** | `Core/Src/main_cascade.c` | `uint8_t buffer_index` overflow | Replaced with bounded `uint32_t total` count (Phase 1) | ✅ Fixed |
 | **D4** | `Core/Inc/ekf.h` | `TAU`/`Q_VAR` drift between C and Python | Synchronized via `tools/gen_params.py` (Phase 1) | ✅ Fixed |
 | **D5** | `Core/Src/main_cascade.c` | Stubbed `printf` inference returning constant 0 | Integrated real CMSIS-NN INT4/INT8 kernels (Phase 2) | ✅ Fixed |
-| **D6** | `phase6_benchmark/` | Invented cost per step (50.0/1.0) | Schema v2 native measurements (`bench_main.c`) (Phase 3) | ✅ Fixed |
+| **D6** | `phase6_benchmark/` | Invented cost per step (50.0/1.0) | Schema v3 native measurements (`bench_main.c`) (Phase 3) | ✅ Fixed |
 | **D7** | Baseline comparison | Easy 125σ faults obscuring MA baseline | Implemented fault severity ladder & realistic drift evaluation (Phase 4) | ✅ Fixed |
-| **D8** | `tests/` | Empty test directory | Developed 95 C/Python test suite (`pytest tests/`) | ✅ Fixed |
+| **D8** | `tests/` | Empty test directory | Developed 96 C/Python test suite (`pytest tests/`) | ✅ Fixed |
 
 ---
 

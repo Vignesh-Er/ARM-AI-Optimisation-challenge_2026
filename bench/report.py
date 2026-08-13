@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: Apache-2.0
-"""Benchmark Reporting Tool for PACI-Arm (Schema v2).
+"""Benchmark Reporting Tool for PACI-Arm (Schema v3).
 
-Reads a benchmark JSON file conforming to Schema v2 (bench/bench_json.h/c),
+Reads a benchmark JSON file conforming to Schema v3 (bench/bench_json.h/c),
 validates all fields strictly, and produces:
   1. A structured Markdown benchmark report (Execution Latency, Cascade Trace,
      Memory Footprint, and Platform Metadata).
@@ -53,15 +53,15 @@ def _validate_dict(val: Any, name: str) -> Dict[str, Any]:
     return val
 
 
-def validate_and_parse_schema_v2(data: Any) -> Dict[str, Any]:
-    """Strictly validates benchmark JSON against Schema v2.
+def validate_and_parse_schema_v3(data: Any) -> Dict[str, Any]:
+    """Strictly validates benchmark JSON against Schema v3.
 
     Raises ValueError or KeyError if any required field is missing or malformed.
     """
     if not isinstance(data, dict):
         raise ValueError(f"Benchmark JSON root must be an object, got {type(data).__name__}")
 
-    # Top-level required fields per Schema v2 specification
+    # Top-level required fields per Schema v3 specification
     required_top_keys = [
         "schema_version",
         "target",
@@ -76,7 +76,7 @@ def validate_and_parse_schema_v2(data: Any) -> Dict[str, Any]:
     ]
     for k in required_top_keys:
         if k not in data:
-            raise KeyError(f"Missing required top-level field in Schema v2 benchmark JSON: '{k}'")
+            raise KeyError(f"Missing required top-level field in Schema v3 benchmark JSON: '{k}'")
 
     schema_version = _validate_int(data["schema_version"], "schema_version", min_val=1)
     if schema_version != 3:
@@ -570,20 +570,20 @@ def generate_plots(data: Dict[str, Any], output_path: str) -> bool:
 
 def main(argv: Optional[List[str]] = None) -> int:
     parser = argparse.ArgumentParser(
-        description="PACI-Arm Schema v2 Benchmark Report Generator",
+        description="PACI-Arm Schema v3 Benchmark Report Generator",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
     )
     parser.add_argument(
         "input_pos",
         nargs="?",
         default=None,
-        help="Positional path to input Schema v2 benchmark JSON.",
+        help="Positional path to input Schema v3 benchmark JSON.",
     )
     parser.add_argument(
         "-i", "--input",
         dest="input_flag",
         default=None,
-        help="Path to input Schema v2 benchmark JSON.",
+        help="Path to input Schema v3 benchmark JSON.",
     )
     parser.add_argument(
         "-o", "--output-md",
@@ -622,7 +622,7 @@ def main(argv: Optional[List[str]] = None) -> int:
         return 1
 
     try:
-        validated_data = validate_and_parse_schema_v2(raw_data)
+        validated_data = validate_and_parse_schema_v3(raw_data)
     except (ValueError, KeyError) as err:
         print(f"[ERROR] Benchmark schema validation failed for '{input_path}': {err}", file=sys.stderr)
         return 1

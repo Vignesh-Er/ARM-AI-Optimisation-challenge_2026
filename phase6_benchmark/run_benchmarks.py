@@ -74,7 +74,7 @@ def run_baseline(baseline_class, dataset):
 
 
 def _load_measured_costs():
-    """Load measured execution latency (ns) from Schema v2 JSON in outputs/bench/ (D6 fix)."""
+    """Load measured execution latency (ns) from Schema v3 JSON in outputs/bench/ (D6 fix)."""
     import json
     for fname in ("aarch64-linux.json", "native-smoke.json"):
         fpath = os.path.join(config.OUTPUT_DIR, "bench", fname)

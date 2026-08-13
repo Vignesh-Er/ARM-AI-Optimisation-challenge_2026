@@ -33,7 +33,7 @@ This document provides step-by-step instructions for running exact instruction c
 
 ## 2. Running Automated Instruction Profiling
 
-The harness [`bench/fvp_profile.py`](../bench/fvp_profile.py) automates cross-compilation, FVP invocation, trace log collection, two-point differencing, and Schema v2 JSON output.
+The harness [`bench/fvp_profile.py`](../bench/fvp_profile.py) automates cross-compilation, FVP invocation, trace log collection, two-point differencing, and Schema v3 JSON output.
 
 ### Command Execution
 ```bash
@@ -83,4 +83,4 @@ Instruction count differencing measures exact executed instructions between exec
 - **Tier 2 INT8**: $\Delta I_{\text{T2}} = I_{\text{post\_t2}} - I_{\text{pre\_t2}}$
 - **Cascade Trace**: Total instructions across 2,000 steps divided by 2,000 to obtain amortized instructions per step.
 
-The results are parsed and formatted into `outputs/bench/cortex-m55-fvp.json` conforming strictly to **Schema v2**.
+The results are parsed and formatted into `outputs/bench/cortex-m55-fvp.json` conforming strictly to **Schema v3**.

@@ -15,18 +15,18 @@
   "model_artifacts": {"tier1": "tier1_model.tflite", "tier2": "tier2_model.tflite"},
   "units": {
     "tier0_ekf": {
-      "hot": {"value": 463.848, "mean": 473.272, "median": 463.848, "min": 435.018, "max": 606.778, "mad": 9.681, "samples": 31}
+      "hot": {"value": 465.196, "mean": 463.822, "median": 465.196, "min": 428.569, "max": 514.318, "mad": 12.220, "samples": 31}
     },
     "tier1_int4": {
-      "hot": {"value": 24023.227, "mean": 24845.915, "median": 24023.227, "min": 21458.045, "max": 31292.085, "mad": 2149.351, "samples": 31},
-      "cold": {"value": 34570.000, "mean": 34068.065, "median": 34570.000, "min": 26930.000, "max": 40500.000, "mad": 1850.000, "samples": 31},
+      "hot": {"value": 22422.872, "mean": 22548.863, "median": 22422.872, "min": 21262.812, "max": 24887.446, "mad": 535.168, "samples": 31},
+      "cold": {"value": 27970.000, "mean": 31171.613, "median": 27970.000, "min": 25260.000, "max": 113320.000, "mad": 1240.000, "samples": 31},
       "scratch_bytes": 8192
     },
     "tier2_int8": {
-      "hot": {"value": 128953.333, "mean": 128941.763, "median": 128953.333, "min": 102144.800, "max": 145342.667, "mad": 11323.733, "samples": 31},
-      "cold": {"value": 119650.000, "mean": 124296.129, "median": 119650.000, "min": 105930.000, "max": 150620.000, "mad": 8430.000, "samples": 31},
+      "hot": {"value": 110517.872, "mean": 110854.255, "median": 110517.872, "min": 103774.681, "max": 118287.447, "mad": 1324.043, "samples": 31},
+      "cold": {"value": 130790.000, "mean": 130303.548, "median": 130790.000, "min": 112230.000, "max": 179810.000, "mad": 6620.000, "samples": 31},
       "scratch_bytes": 8192
     },
-    "cascade_trace": {"total": 18487500, "always_on": 210433800, "n1": 303, "n2": 90, "steps": 2000}
+    "cascade_trace": {"total": 23020300, "always_on": 244418400, "n1": 303, "n2": 90, "steps": 2000}
   }
 }

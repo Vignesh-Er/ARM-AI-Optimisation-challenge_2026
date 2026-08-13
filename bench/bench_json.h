@@ -9,7 +9,7 @@
 extern "C" {
 #endif
 
-// A fixed-shape writer for outputs/bench/<target>.json's schema v2 (Task
+// A fixed-shape writer for outputs/bench/<target>.json's schema v3 (Task
 // 3.3) — not a general JSON library, since the schema is fully known ahead
 // of time and never varies at runtime beyond the values themselves.
 
