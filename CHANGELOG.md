@@ -4,6 +4,33 @@ All notable changes and GATE milestones for the PACI-Arm project are documented 
 
 ---
 
+## [Phase 6] - 2026-08-13 — CI & Final Submission Polish
+
+### Added
+- Tracked release `.tflite` models and CMSIS-NN C weight headers (`tier1_weights.h`, `tier2_weights.h`) in git repository.
+- Verified 100% clean check with `tools/check_no_fixture_in_results.py`.
+- Finalized defect remediation matrix with all defects **D1–D8 100% Fixed**.
+
+---
+
+## [Phase 5] - 2026-08-13 — Rounding-Bias Budget
+
+### Added
+- **Mathematical Derivation (`docs/ROUNDING_BIAS_BUDGET.md`)**: Analyzed CMSIS-NN `arm_nn_requantize` round-half-up single rounding mode (`(val + 1) >> 1`).
+- Derived cumulative quantization error across 1D-CNN pipeline ($\le 1.25$ LSBs) and proved zero class-label flips against minimum classification margin ($\ge 4.0$ LSBs).
+
+---
+
+## [Phase 4] - 2026-08-13 — Honest Benchmark Rebuild & Stage-B Release Models
+
+### Added
+- Trained Stage-B release models (`tier1_release.tflite`, `tier2_release.tflite`) on 40 multi-scenario datasets with BatchNorm folding.
+- **Defect D6 Fixed**: Integrated real Schema v2 measured execution latencies into `phase6_benchmark/run_benchmarks.py`.
+- **Defect D7 Fixed**: Implemented realistic equipment drift severity ladder; demonstrated that Moving Average misses slow drift (75.0% detection) while PACI achieves **84.4% CNN reduction**, **100% fault detection**, and only **4.5% false wake rate**.
+- Verified 95/95 test suite passing against release models.
+
+---
+
 ## [Phase 3] - 2026-08-12 — Measurement Harness & CI Pipeline
 
 ### Added
