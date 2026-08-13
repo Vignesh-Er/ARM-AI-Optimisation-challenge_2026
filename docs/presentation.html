@@ -3,27 +3,31 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PACI: Physics-Informed Anomaly Classification for TinyML — Arm AI Optimization Challenge 2026</title>
+    <title>PACI: Physics-Informed Anomaly Classification</title>
     <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=JetBrains+Mono:wght@400;700&display=swap');
+
         :root {
             --bg: #0b0f19;
             --surface: #131b2e;
             --surface-accent: #1e293b;
             --primary: #0091ff;
-            --primary-glow: rgba(0, 145, 255, 0.35);
+            --primary-glow: rgba(0, 145, 255, 0.4);
             --accent: #00e599;
-            --accent-glow: rgba(0, 229, 153, 0.35);
+            --accent-glow: rgba(0, 229, 153, 0.4);
             --warning: #ffb800;
+            --danger: #ff4757;
             --text-main: #f8fafc;
             --text-muted: #94a3b8;
             --border: #1e293b;
+            --glass: rgba(19, 27, 46, 0.75);
         }
 
         * {
             box-sizing: border-box;
             margin: 0;
             padding: 0;
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            font-family: 'Inter', sans-serif;
         }
 
         body {
@@ -35,66 +39,52 @@
             align-items: center;
             height: 100vh;
             width: 100vw;
+            background-image: 
+                radial-gradient(circle at 15% 50%, rgba(0, 145, 255, 0.05), transparent 25%),
+                radial-gradient(circle at 85% 30%, rgba(0, 229, 153, 0.05), transparent 25%);
         }
 
         .slide-container {
             width: 90vw;
-            max-width: 1200px;
+            max-width: 1400px;
             height: 85vh;
             background: linear-gradient(135deg, var(--surface) 0%, #0d1322 100%);
             border: 1px solid var(--border);
             border-radius: 20px;
-            padding: 45px 60px;
-            box-shadow: 0 25px 60px rgba(0, 0, 0, 0.6), 0 0 40px var(--primary-glow);
+            padding: 40px 60px;
+            box-shadow: 0 25px 60px rgba(0, 0, 0, 0.6), 0 0 50px rgba(0, 145, 255, 0.15);
             display: none;
             flex-direction: column;
             justify-content: space-between;
             position: relative;
-            animation: fadeIn 0.4s ease-in-out;
+            animation: slideIn 0.5s cubic-bezier(0.16, 1, 0.3, 1);
         }
 
-        .slide-container.active {
-            display: flex;
-        }
+        .slide-container.active { display: flex; }
 
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateY(20px) scale(0.98); }
+            to { opacity: 1; transform: translateY(0) scale(1); }
         }
 
         .header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            border-bottom: 1px solid var(--border);
-            padding-bottom: 18px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            padding-bottom: 15px;
         }
 
         .badge {
             background: rgba(0, 145, 255, 0.15);
             color: var(--primary);
             border: 1px solid var(--primary);
-            padding: 5px 14px;
+            padding: 6px 16px;
             border-radius: 20px;
             font-size: 0.85rem;
-            font-weight: 600;
-            letter-spacing: 0.5px;
+            font-weight: 800;
+            letter-spacing: 1px;
             text-transform: uppercase;
-        }
-
-        .slide-title {
-            font-size: 2.2rem;
-            font-weight: 700;
-            background: linear-gradient(90deg, #ffffff, #94a3b8);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            margin-top: 15px;
-        }
-
-        .slide-subtitle {
-            font-size: 1.15rem;
-            color: var(--text-muted);
-            margin-top: 6px;
         }
 
         .content {
@@ -102,334 +92,393 @@
             display: flex;
             flex-direction: column;
             justify-content: center;
-            margin: 25px 0;
-            gap: 20px;
+            margin: 20px 0;
         }
 
-        .grid-2 {
+        .split-layout {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 24px;
+            gap: 40px;
+            align-items: center;
+            height: 100%;
         }
 
-        .grid-3 {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
+        .text-block h2 {
+            font-size: 2.8rem;
+            font-weight: 800;
+            background: linear-gradient(90deg, #ffffff, #94a3b8);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 20px;
+            line-height: 1.2;
+        }
+
+        .text-block p {
+            font-size: 1.25rem;
+            color: var(--text-muted);
+            line-height: 1.6;
+            margin-bottom: 20px;
+        }
+
+        .visual-block {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .media-image {
+            width: 100%;
+            max-height: 50vh;
+            object-fit: contain;
+            border-radius: 16px;
+            border: 1px solid var(--border);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        }
+
+        /* Architecture Diagram CSS */
+        .arch-diagram {
+            display: flex;
+            flex-direction: column;
             gap: 20px;
+            width: 100%;
+            max-width: 700px;
+            margin: 0 auto;
         }
-
-        .grid-4 {
-            display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            gap: 16px;
-        }
-
-        .card {
+        .arch-tier {
+            padding: 25px;
+            border-radius: 16px;
             background: rgba(30, 41, 59, 0.6);
+            backdrop-filter: blur(10px);
             border: 1px solid var(--border);
-            border-radius: 14px;
-            padding: 24px;
-            backdrop-filter: blur(8px);
-            transition: transform 0.2s, border-color 0.2s;
+            position: relative;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: transform 0.3s ease, border-color 0.3s ease;
+        }
+        .arch-tier:hover { transform: translateX(10px); }
+        .tier-0 { border-left: 5px solid var(--accent); }
+        .tier-0:hover { border-color: var(--accent); box-shadow: 0 0 20px var(--accent-glow); }
+        .tier-1 { border-left: 5px solid var(--warning); }
+        .tier-1:hover { border-color: var(--warning); box-shadow: 0 0 20px rgba(255,184,0,0.2); }
+        .tier-2 { border-left: 5px solid var(--danger); }
+        .tier-2:hover { border-color: var(--danger); box-shadow: 0 0 20px rgba(255,71,87,0.2); }
+        
+        .arch-title { font-size: 1.4rem; font-weight: 800; margin-bottom: 5px; }
+        .tier-0 .arch-title { color: var(--accent); }
+        .tier-1 .arch-title { color: var(--warning); }
+        .tier-2 .arch-title { color: var(--danger); }
+        
+        .arch-desc { color: var(--text-muted); font-size: 1rem; }
+        .arch-stats { text-align: right; font-family: 'JetBrains Mono', monospace; color: #38bdf8; font-size: 0.9rem;}
+
+        .arrow-down {
+            text-align: center;
+            color: var(--text-muted);
+            font-size: 1.5rem;
+            animation: float 2s infinite ease-in-out;
         }
 
-        .card:hover {
-            border-color: var(--primary);
-            transform: translateY(-2px);
+        @keyframes float {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(8px); }
         }
 
+        /* Terminal CSS */
+        .terminal {
+            background: #050505;
+            border: 1px solid #333;
+            border-radius: 12px;
+            width: 100%;
+            height: 400px;
+            font-family: 'JetBrains Mono', monospace;
+            padding: 20px;
+            overflow: hidden;
+            position: relative;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.8);
+        }
+        .terminal-header {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 15px;
+        }
+        .term-dot { width: 12px; height: 12px; border-radius: 50%; }
+        .term-red { background: #ff5f56; }
+        .term-yel { background: #ffbd2e; }
+        .term-grn { background: #27c93f; }
+        .term-body { font-size: 0.9rem; line-height: 1.5; color: #a1a1a1; }
+        .t-green { color: #00e599; }
+        .t-yellow { color: #ffb800; font-weight: bold; }
+        .t-red { color: #ff4757; font-weight: bold; }
+        
+        /* Metric Grid */
+        .metric-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            width: 100%;
+        }
         .metric-card {
-            background: linear-gradient(180deg, rgba(30, 41, 59, 0.8) 0%, rgba(19, 27, 46, 0.9) 100%);
+            background: var(--surface-accent);
+            padding: 25px;
+            border-radius: 16px;
             border: 1px solid var(--border);
-            border-radius: 14px;
-            padding: 22px;
             text-align: center;
         }
+        .metric-val { font-size: 3rem; font-weight: 800; margin-bottom: 5px; }
+        .metric-label { color: var(--text-muted); font-weight: 600; text-transform: uppercase; font-size: 0.85rem; letter-spacing: 1px;}
+        
+        .val-primary { color: var(--primary); text-shadow: 0 0 15px var(--primary-glow); }
+        .val-accent { color: var(--accent); text-shadow: 0 0 15px var(--accent-glow); }
 
-        .metric-val {
-            font-size: 2.5rem;
-            font-weight: 800;
-            color: var(--accent);
-            text-shadow: 0 0 20px var(--accent-glow);
-            margin-bottom: 5px;
+        /* GitHub UI */
+        .github-mock {
+            background: #0d1117;
+            border: 1px solid #30363d;
+            border-radius: 12px;
+            padding: 20px;
+            width: 100%;
         }
-
-        .metric-label {
-            font-size: 0.95rem;
-            color: var(--text-muted);
-            font-weight: 500;
-        }
+        .gh-header { display: flex; align-items: center; gap: 15px; border-bottom: 1px solid #21262d; padding-bottom: 15px; margin-bottom: 15px; }
+        .gh-repo { font-size: 1.5rem; color: #58a6ff; font-weight: 600; }
+        .gh-badge { background: rgba(35, 134, 54, 0.15); border: 1px solid #238636; color: #3fb950; padding: 4px 12px; border-radius: 20px; font-size: 0.8rem; font-weight: 600; display: flex; align-items: center; gap: 6px;}
+        .gh-file { display: flex; justify-content: space-between; padding: 12px 15px; border: 1px solid #30363d; border-radius: 6px; margin-bottom: 8px; background: #161b22; color: #c9d1d9;}
 
         .footer {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            border-top: 1px solid var(--border);
-            padding-top: 18px;
+            border-top: 1px solid rgba(255,255,255,0.05);
+            padding-top: 15px;
             color: var(--text-muted);
-            font-size: 0.9rem;
         }
 
-        .controls {
-            display: flex;
-            gap: 12px;
-        }
-
-        button {
-            background: var(--surface-accent);
+        .controls button {
+            background: rgba(255,255,255,0.05);
             border: 1px solid var(--border);
             color: var(--text-main);
-            padding: 8px 18px;
+            padding: 10px 20px;
             border-radius: 8px;
             cursor: pointer;
             font-weight: 600;
             transition: all 0.2s;
         }
-
-        button:hover {
+        .controls button:hover {
             background: var(--primary);
             border-color: var(--primary);
-            color: #fff;
-        }
-
-        ul {
-            list-style: none;
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-        }
-
-        li {
-            position: relative;
-            padding-left: 28px;
-            font-size: 1.1rem;
-            line-height: 1.5;
-            color: #cbd5e1;
-        }
-
-        li::before {
-            content: "➔";
-            position: absolute;
-            left: 0;
-            color: var(--primary);
-            font-weight: bold;
-        }
-
-        .highlight {
-            color: var(--accent);
-            font-weight: 600;
-        }
-
-        .code-box {
-            background: #080c14;
-            border: 1px solid #1e293b;
-            border-radius: 10px;
-            padding: 16px;
-            font-family: "Fira Code", monospace;
-            font-size: 0.9rem;
-            color: #38bdf8;
-            overflow-x: auto;
         }
     </style>
 </head>
 <body>
 
-    <!-- Slide 1: Title -->
+    <!-- Slide 1: The Problem -->
     <div class="slide-container active" id="slide-1">
         <div class="header">
-            <span class="badge">Arm AI Optimization Challenge 2026</span>
-            <span style="color: var(--text-muted);">Track 1: Physical AI</span>
+            <span class="badge">0:00 - 0:25 | The Problem</span>
+            <span style="color: var(--text-muted);">PACI Presentation</span>
         </div>
-        <div class="content" style="text-align: center; align-items: center;">
-            <h1 style="font-size: 3.5rem; font-weight: 800; line-height: 1.1; margin-bottom: 15px; background: linear-gradient(90deg, #38bdf8, #00e599); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">
-                PACI
-            </h1>
-            <h2 style="font-size: 1.8rem; font-weight: 600; color: #f8fafc; margin-bottom: 25px;">
-                Physics-Informed Anomaly Classification for TinyML
-            </h2>
-            <p style="font-size: 1.2rem; color: var(--text-muted); max-width: 800px; line-height: 1.6;">
-                An ultra-low-power, 3-tier cascade architecture optimizing edge semiconductor process monitoring on Arm Cortex-M and Linux edge targets.
-            </p>
-            <div class="grid-3" style="width: 100%; margin-top: 40px;">
-                <div class="metric-card">
-                    <div class="metric-val">90.58%</div>
-                    <div class="metric-label">End-to-End Compute Reduction</div>
+        <div class="content">
+            <div class="split-layout">
+                <div class="text-block">
+                    <h2>The AI Energy Tax</h2>
+                    <p>In industrial IoT, running continuous deep learning models on battery-powered sensors drains power incredibly fast.</p>
+                    <p>But if we don't, we might miss critical machine failures.</p>
+                    <p style="color: var(--primary); font-weight: 600;">How do we get the accuracy of AI without the constant energy tax?</p>
                 </div>
-                <div class="metric-card">
-                    <div class="metric-val">10.62×</div>
-                    <div class="metric-label">Effective Execution Speedup</div>
-                </div>
-                <div class="metric-card">
-                    <div class="metric-val">100%</div>
-                    <div class="metric-label">Classification Parity</div>
+                <div class="visual-block">
+                    <img src="../outputs/plots/battery_drain.jpg" alt="Battery Drain Problem" class="media-image">
                 </div>
             </div>
         </div>
         <div class="footer">
-            <span>Author: Vignesh-Er</span>
+            <span>Slide 1 / 5</span>
             <div class="controls">
-                <button onclick="prevSlide()">◀ Previous</button>
-                <button onclick="nextSlide()">Next ▶</button>
+                <button onclick="prevSlide()">◀</button>
+                <button onclick="nextSlide()">▶</button>
             </div>
         </div>
     </div>
 
-    <!-- Slide 2: Problem & Cascade Architecture -->
+    <!-- Slide 2: PACI Cascade -->
     <div class="slide-container" id="slide-2">
         <div class="header">
-            <span class="badge">Architecture</span>
-            <span>3-Tier Physics-Gated Cascade</span>
+            <span class="badge">0:25 - 0:50 | The Solution</span>
+            <span style="color: var(--text-muted);">PACI Cascade Architecture</span>
         </div>
         <div class="content">
-            <h2 class="slide-title">Why Always-On ML Fails on TinyML Edge</h2>
-            <p class="slide-subtitle">Running deep neural inference continuously on edge sensors wastes over 90% of energy on nominal data.</p>
-            
-            <div class="grid-3" style="margin-top: 15px;">
-                <div class="card">
-                    <h3 style="color: var(--primary); margin-bottom: 12px; font-size: 1.3rem;">Tier 0: Physics EKF</h3>
-                    <p style="font-size: 0.95rem; color: #94a3b8; margin-bottom: 12px;">Deal-Grove analytic model + Scalar Kalman Filter + NIS Statistical Gating.</p>
-                    <div class="code-box">Hot Latency: ~465 ns<br>RAM Footprint: 0 B scratch<br>Filters: 84.8% nominal cycles</div>
+            <div class="split-layout">
+                <div class="text-block">
+                    <h2>Evidence-Proportional Inference</h2>
+                    <p>We built a three-tier inference cascade that only computes what it absolutely needs to.</p>
+                    <p>Tier 0 continuously tracks machine health at micro-watt levels. Neural networks only wake up when a statistical threshold is breached.</p>
                 </div>
-                <div class="card">
-                    <h3 style="color: var(--accent); margin-bottom: 12px; font-size: 1.3rem;">Tier 1: INT4 Screening</h3>
-                    <p style="font-size: 0.95rem; color: #94a3b8; margin-bottom: 12px;">4-bit quantized Conv1D neural screen using CMSIS-NN <code>arm_convolve_s4</code>.</p>
-                    <div class="code-box">Flash Weights: 216 Bytes<br>Hot Latency: ~22.4 μs<br>Resolves: 70.3% anomalies</div>
-                </div>
-                <div class="card">
-                    <h3 style="color: var(--warning); margin-bottom: 12px; font-size: 1.3rem;">Tier 2: INT8 Classifier</h3>
-                    <p style="font-size: 0.95rem; color: #94a3b8; margin-bottom: 12px;">Full 5-class fault classifier using CMSIS-NN <code>arm_convolve_wrapper_s8</code>.</p>
-                    <div class="code-box">Invoked only: 4.5% of time<br>Hot Latency: ~110.5 μs<br>Accuracy: Bit-exact parity</div>
+                <div class="visual-block">
+                    <div class="arch-diagram">
+                        <div class="arch-tier tier-0">
+                            <div>
+                                <div class="arch-title">Tier 0: Physics EKF</div>
+                                <div class="arch-desc">Extended Kalman Filter (Deal-Grove)</div>
+                            </div>
+                            <div class="arch-stats">Latency: 465 ns<br>Duty: 85-95%</div>
+                        </div>
+                        <div class="arrow-down">▼ NIS Threshold Breach</div>
+                        <div class="arch-tier tier-1">
+                            <div>
+                                <div class="arch-title">Tier 1: INT4 CNN</div>
+                                <div class="arch-desc">Anomaly Screener (arm_convolve_s4)</div>
+                            </div>
+                            <div class="arch-stats">Weights: 216 B<br>Invoked: ~15%</div>
+                        </div>
+                        <div class="arrow-down">▼ Screener Confirmed</div>
+                        <div class="arch-tier tier-2">
+                            <div>
+                                <div class="arch-title">Tier 2: INT8 CNN</div>
+                                <div class="arch-desc">Fault Classifier (arm_convolve_wrapper_s8)</div>
+                            </div>
+                            <div class="arch-stats">Weights: 11.8 KB<br>Invoked: ~4.5%</div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
         <div class="footer">
             <span>Slide 2 / 5</span>
             <div class="controls">
-                <button onclick="prevSlide()">◀ Previous</button>
-                <button onclick="nextSlide()">Next ▶</button>
+                <button onclick="prevSlide()">◀</button>
+                <button onclick="nextSlide()">▶</button>
             </div>
         </div>
     </div>
 
-    <!-- Slide 3: Arm-Specific Optimizations -->
+    <!-- Slide 3: Bias Budget -->
     <div class="slide-container" id="slide-3">
         <div class="header">
-            <span class="badge">Optimization</span>
-            <span>Arm Architecture & CMSIS-NN</span>
+            <span class="badge">0:50 - 1:20 | Hard Work</span>
+            <span style="color: var(--text-muted);">CMSIS-NN & Bias Budget</span>
         </div>
         <div class="content">
-            <h2 class="slide-title">Arm-Specific Embedded Innovations</h2>
-            <p class="slide-subtitle">Engineered specifically for Arm Cortex-M55 / Helium and aarch64 architectures.</p>
-            
-            <div class="grid-2" style="margin-top: 15px;">
-                <div class="card">
-                    <h3 style="color: #38bdf8; margin-bottom: 10px;">⚡ CMSIS-NN INT4 & INT8 Kernel Tuning</h3>
-                    <ul>
-                        <li>Packed 4-bit nibbles (2 weights/byte) achieving <span class="highlight">216 B weight footprint</span> for Tier 1.</li>
-                        <li>Vectorized DSP/Helium acceleration using CMSIS-NN v7.0.0 and CMSIS-DSP v1.17.1.</li>
-                        <li>Chronologically linearizing ring buffer (<code>paci_ring.c</code>) for zero-copy window extraction.</li>
-                    </ul>
+            <div class="split-layout">
+                <div class="text-block">
+                    <h2>Bounding Rounding Bias</h2>
+                    <p>Building this on CMSIS-NN wasn't trivial. Dynamic precision scaling introduces rounding errors.</p>
+                    <p>We rigorously mapped the quantization layers and mathematically bounded the rounding bias to exactly <strong style="color: var(--accent);">1.25 LSBs</strong>.</p>
+                    <p>This guarantees absolute mathematical stability and <strong>zero false decision flips</strong>.</p>
                 </div>
-                <div class="card">
-                    <h3 style="color: #00e599; margin-bottom: 10px;">📐 Single-Rounding Bias Budget</h3>
-                    <ul>
-                        <li>Activated <code>CMSIS_NN_USE_SINGLE_ROUNDING</code> for ~50% faster requantization arithmetic.</li>
-                        <li>Derived mathematical error bound (<span class="highlight">≤ 1.25 LSBs</span>) across Conv → Pool → Dense chain.</li>
-                        <li>Proved <span class="highlight">0 class-label flips</span> against min classification margin (≥ 4.0 LSBs).</li>
-                    </ul>
+                <div class="visual-block">
+                    <img src="../outputs/plots/bias_predicted_vs_measured.png" alt="Bias Predicted vs Measured Plot" class="media-image">
                 </div>
             </div>
         </div>
         <div class="footer">
             <span>Slide 3 / 5</span>
             <div class="controls">
-                <button onclick="prevSlide()">◀ Previous</button>
-                <button onclick="nextSlide()">Next ▶</button>
+                <button onclick="prevSlide()">◀</button>
+                <button onclick="nextSlide()">▶</button>
             </div>
         </div>
     </div>
 
-    <!-- Slide 4: Empirical Benchmark Results -->
+    <!-- Slide 4: Results -->
     <div class="slide-container" id="slide-4">
         <div class="header">
-            <span class="badge">Results</span>
-            <span>Schema v3 Measured Benchmarks</span>
+            <span class="badge">1:20 - 1:45 | Results</span>
+            <span style="color: var(--text-muted);">Demo vs Benchmark</span>
         </div>
         <div class="content">
-            <h2 class="slide-title">Measured Baseline Comparison & Energy Savings</h2>
-            <p class="slide-subtitle">Real measured latencies evaluated against standard anomaly detection baselines on realistic drift ladder.</p>
-            
-            <div class="grid-4" style="margin-top: 10px;">
-                <div class="metric-card">
-                    <div class="metric-val">84.4%</div>
-                    <div class="metric-label">CNN Wake Reduction</div>
+            <div class="split-layout">
+                <div class="visual-block">
+                    <div class="metric-grid">
+                        <div class="metric-card">
+                            <div class="metric-val val-primary">90.58%</div>
+                            <div class="metric-label">Compute Reduction<br>(Canonical Benchmark)</div>
+                        </div>
+                        <div class="metric-card">
+                            <div class="metric-val val-accent">10.62×</div>
+                            <div class="metric-label">Effective Speedup<br>(Canonical Benchmark)</div>
+                        </div>
+                        <div class="metric-card" style="grid-column: span 2;">
+                            <div class="metric-val" style="color: #f8fafc; font-size: 2.5rem;">169 / 300 steps</div>
+                            <div class="metric-label">Zero CNN Escalation (Live Demo)</div>
+                        </div>
+                    </div>
                 </div>
-                <div class="metric-card">
-                    <div class="metric-val">4.5%</div>
-                    <div class="metric-label">False Wake Rate</div>
+                <div class="visual-block">
+                    <div class="terminal">
+                        <div class="terminal-header">
+                            <div class="term-dot term-red"></div>
+                            <div class="term-dot term-yel"></div>
+                            <div class="term-dot term-grn"></div>
+                        </div>
+                        <div class="term-body" id="term-text">
+                            [0.00s] EKF <span class="t-green">Normal</span> (NIS: 1.2)<br>
+                            [0.05s] EKF <span class="t-green">Normal</span> (NIS: 1.5)<br>
+                            [0.10s] EKF <span class="t-green">Normal</span> (NIS: 0.8)<br>
+                            [0.15s] EKF <span class="t-yellow">ANOMALY</span> (NIS: 6.7)<br>
+                            &nbsp;&nbsp;&nbsp;&nbsp;➔ Wake Tier 1 INT4...<br>
+                            &nbsp;&nbsp;&nbsp;&nbsp;➔ T1 <span class="t-yellow">CONFIRMS</span> anomaly.<br>
+                            &nbsp;&nbsp;&nbsp;&nbsp;➔ Wake Tier 2 INT8...<br>
+                            &nbsp;&nbsp;&nbsp;&nbsp;➔ T2 Classifies: <span class="t-red">[FAULT: BEARING]</span><br>
+                            [0.20s] EKF <span class="t-green">Normal</span> (NIS: 2.1)<br>
+                            <span class="t-green">█</span>
+                        </div>
+                    </div>
                 </div>
-                <div class="metric-card">
-                    <div class="metric-val">100%</div>
-                    <div class="metric-label">Slow Drift Detection</div>
-                </div>
-                <div class="metric-card">
-                    <div class="metric-val">17.09 KB</div>
-                    <div class="metric-label">Base Flash Footprint</div>
-                </div>
-            </div>
-
-            <div class="card" style="margin-top: 15px;">
-                <h4 style="color: #f8fafc; margin-bottom: 8px;">Key Baseline Finding:</h4>
-                <p style="color: #94a3b8; font-size: 1rem; line-height: 1.5;">
-                    Moving Average fails against slow equipment drift (only <span style="color:#ef4444; font-weight:600;">75% detection</span>) because it normalizes process drift away. PACI's physics model maintains true physical expectation, detecting <span class="highlight">100% of drift faults on the test set</span> while avoiding over <span class="highlight">84% of unnecessary CNN wake-ups</span>.
-                </p>
             </div>
         </div>
         <div class="footer">
             <span>Slide 4 / 5</span>
             <div class="controls">
-                <button onclick="prevSlide()">◀ Previous</button>
-                <button onclick="nextSlide()">Next ▶</button>
+                <button onclick="prevSlide()">◀</button>
+                <button onclick="nextSlide()">▶</button>
             </div>
         </div>
     </div>
 
-    <!-- Slide 5: Quality, Testing & Conclusion -->
+    <!-- Slide 5: Reproducibility -->
     <div class="slide-container" id="slide-5">
         <div class="header">
-            <span class="badge">Verification</span>
-            <span>Zero-Leakage & 100% Test Coverage</span>
+            <span class="badge">1:45 - 2:00 | Conclusion</span>
+            <span style="color: var(--text-muted);">Fully Reproducible</span>
         </div>
-        <div class="content" style="text-align: center; align-items: center;">
-            <h2 class="slide-title" style="margin-bottom: 10px;">Robustness & Reproducibility</h2>
-            <p class="slide-subtitle" style="margin-bottom: 25px;">Every component is unit tested, CI-automated, and mathematically bounded.</p>
-            
-            <div class="grid-3" style="width: 100%;">
-                <div class="card">
-                    <h3 style="color: var(--accent); font-size: 2rem; margin-bottom: 5px;">96 / 96</h3>
-                    <p style="color: #94a3b8;">Pytest unit & C integration tests passing</p>
+        <div class="content">
+            <div class="split-layout">
+                <div class="text-block">
+                    <h2>Ready for the Edge</h2>
+                    <p>Implemented natively in C for Arm Cortex-M devices, backed by fully reproducible CI pipelines.</p>
+                    <p>PACI delivers the accuracy of deep learning at the power budget of a simple physics filter.</p>
                 </div>
-                <div class="card">
-                    <h3 style="color: var(--primary); font-size: 2rem; margin-bottom: 5px;">8 / 8</h3>
-                    <p style="color: #94a3b8;">Defects (D1–D8) resolved and validated</p>
+                <div class="visual-block">
+                    <div class="github-mock">
+                        <div class="gh-header">
+                            <svg fill="#f8fafc" width="32" height="32" viewBox="0 0 24 24"><path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/></svg>
+                            <span class="gh-repo">Vignesh-Er / ARM-AI-Optimisation-challenge_2026</span>
+                        </div>
+                        <div style="display:flex; gap: 10px; margin-bottom: 15px;">
+                            <div class="gh-badge">
+                                <svg width="16" height="16" viewBox="0 0 16 16" fill="#3fb950"><path d="M13.78 4.22a.75.75 0 0 1 0 1.06l-7.25 7.25a.75.75 0 0 1-1.06 0L2.22 9.28a.751.751 0 0 1 .018-1.042.751.751 0 0 1 1.042-.018L6 10.94l6.72-6.72a.75.75 0 0 1 1.06 0Z"></path></svg>
+                                build: passing
+                            </div>
+                            <div class="gh-badge" style="color: #a1a1a1; border-color: #30363d; background: transparent;">96 / 96 Tests Passed</div>
+                        </div>
+                        <div class="gh-file">
+                            <span><svg width="16" height="16" fill="#94a3b8" viewBox="0 0 16 16" style="margin-right:8px; vertical-align:text-bottom;"><path d="M2 1.75C2 .784 2.784 0 3.75 0h6.586c.464 0 .909.184 1.237.513l2.914 2.914c.329.328.513.773.513 1.237v9.586A1.75 1.75 0 0 1 13.25 16h-9.5A1.75 1.75 0 0 1 2 14.25Zm1.75-.25a.25.25 0 0 0-.25.25v12.5c0 .138.112.25.25.25h9.5a.25.25 0 0 0 .25-.25V4.664a.25.25 0 0 0-.073-.177l-2.914-2.914a.25.25 0 0 0-.177-.073ZM8 3.25a.75.75 0 0 1 .75.75v1.5h1.5a.75.75 0 0 1 0 1.5h-1.5v1.5a.75.75 0 0 1-1.5 0V7h-1.5a.75.75 0 0 1 0-1.5h1.5V4A.75.75 0 0 1 8 3.25Z"></path></svg> docs: Update video script</span>
+                            <span style="color: #94a3b8;">just now</span>
+                        </div>
+                        <div class="gh-file">
+                            <span><svg width="16" height="16" fill="#94a3b8" viewBox="0 0 16 16" style="margin-right:8px; vertical-align:text-bottom;"><path d="M2 1.75C2 .784 2.784 0 3.75 0h6.586c.464 0 .909.184 1.237.513l2.914 2.914c.329.328.513.773.513 1.237v9.586A1.75 1.75 0 0 1 13.25 16h-9.5A1.75 1.75 0 0 1 2 14.25Zm1.75-.25a.25.25 0 0 0-.25.25v12.5c0 .138.112.25.25.25h9.5a.25.25 0 0 0 .25-.25V4.664a.25.25 0 0 0-.073-.177l-2.914-2.914a.25.25 0 0 0-.177-.073ZM8 3.25a.75.75 0 0 1 .75.75v1.5h1.5a.75.75 0 0 1 0 1.5h-1.5v1.5a.75.75 0 0 1-1.5 0V7h-1.5a.75.75 0 0 1 0-1.5h1.5V4A.75.75 0 0 1 8 3.25Z"></path></svg> bench_main.c: Schema v3 benchmark</span>
+                            <span style="color: #94a3b8;">2 days ago</span>
+                        </div>
+                    </div>
                 </div>
-                <div class="card">
-                    <h3 style="color: var(--warning); font-size: 2rem; margin-bottom: 5px;">Clean</h3>
-                    <p style="color: #94a3b8;">Zero fixture references in reported metrics</p>
-                </div>
-            </div>
-
-            <div style="margin-top: 30px; padding: 18px 30px; background: rgba(0, 145, 255, 0.1); border: 1px solid var(--primary); border-radius: 12px;">
-                <p style="font-size: 1.1rem; color: #f8fafc; font-weight: 500;">
-                    Ready for deployment on Arm Cortex-M55 / Corstone-300 FVP & Linux Edge.
-                </p>
             </div>
         </div>
         <div class="footer">
             <span>Slide 5 / 5</span>
             <div class="controls">
-                <button onclick="prevSlide()">◀ Previous</button>
-                <button onclick="nextSlide()">Restart ↺</button>
+                <button onclick="prevSlide()">◀</button>
+                <button onclick="nextSlide()">↺ Restart</button>
             </div>
         </div>
     </div>
