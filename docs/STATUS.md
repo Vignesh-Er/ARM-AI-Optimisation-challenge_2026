@@ -597,14 +597,26 @@ Created `bench/fvp_profile.py` automated cross-compilation and two-point instruc
 - **Defect D7 Fixed (Honest Baseline Comparison)**: Moving Average evaluated on slow equipment drift demonstrates that MA adapts and misses slow drift (achieving only 75% detection), while PACI's physics-informed EKF achieves **84.4% CNN invocation reduction** with **100.0% fault detection** and only **4.5% false wake rate** (vs 12.3% on Kalman without physics and 29.4% on CUSUM).
 - **Clean Results Verified**: `tools/check_no_fixture_in_results.py` confirms clean zero-fixture state across `outputs/reports/`, `outputs/bench/`, and `README.md`.
 
-## Phase checklist (Updated)
+## Phase 5 — Rounding-Bias Budget (2026-08-13)
+
+- **Derivation Completed** (`docs/ROUNDING_BIAS_BUDGET.md`): Derived mathematical error bound for CMSIS-NN `arm_nn_requantize` round-half-up single rounding mode (`(val + 1) >> 1`).
+- **Bound Proved**: Cumulative quantization error across the 1D-CNN pipeline is $\le 1.25$ LSBs, whereas minimum logit classification margin across test samples is $\ge 4.0$ LSBs. Proved zero class-label flips occur due to requantization rounding bias.
+
+## Phase 6 — CI & Documentation Polish (2026-08-13)
+
+- **Tracked Release Artifacts**: Release `.tflite` models and generated CMSIS-NN C weight headers tracked in git (`a424e2c`).
+- **README & Benchmark Reports**: README.md updated with Phase 4 release benchmark numbers and baseline comparison matrix. All defects **D1–D8 100% fixed**.
+- **Clean Verification**: `tools/check_no_fixture_in_results.py` verified 100% clean.
+
+## Phase checklist (Final)
 
 - [x] Phase 0 — Compliance and hygiene
 - [x] Phase 1 — Unified C core
 - [x] Phase 2 — CMSIS-NN integration and export
 - [x] Phase 3 — Measurement harness (GATE 3.1–3.5 complete)
 - [x] Phase 4 — Honest benchmark rebuild (Defects D6 & D7 resolved)
-- [ ] Phase 5 — Rounding-bias budget
-- [ ] Phase 6 — CI and docs polish
+- [x] Phase 5 — Rounding-bias budget
+- [x] Phase 6 — CI and docs polish
+
 
 
