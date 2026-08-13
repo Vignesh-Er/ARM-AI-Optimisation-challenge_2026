@@ -425,5 +425,9 @@ int main(int argc, char **argv) {
     printf("Sink accumulator value: %lld\n", (long long)g_volatile_sink);
     printf("=================================================================\n");
 
+#if PACI_TRACE_REQUANT
+    extern void paci_dump_requant_bias(void);
+    paci_dump_requant_bias();
+#endif
     return 0;
 }

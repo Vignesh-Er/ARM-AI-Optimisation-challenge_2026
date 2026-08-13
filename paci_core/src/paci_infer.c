@@ -83,6 +83,20 @@ static paci_status_t paci_conv1d_s8(const int8_t *input, int8_t *output,
     return (status == ARM_CMSIS_NN_SUCCESS) ? PACI_OK : PACI_E_QUANT;
 }
 
+#if PACI_TRACE_REQUANT
+#include <stdio.h>
+static double paci_requant_error_sum = 0.0;
+static uint32_t paci_requant_error_count = 0;
+
+void paci_dump_requant_bias(void) {
+    if (paci_requant_error_count > 0) {
+        printf("[PACI_TRACE_REQUANT] Empirical Mean Bias: %f LSBs over %lu ops\n", 
+               paci_requant_error_sum / paci_requant_error_count, 
+               (unsigned long)paci_requant_error_count);
+    }
+}
+#endif
+
 // arm_avgpool_s8's signature (cmsis_nn_pool_params: stride/padding/activation
 // only) has no input/output offset or multiplier/shift, i.e. it assumes
 // input and output share one scale. The actual trained models'
@@ -109,6 +123,16 @@ static void paci_global_avgpool_s8(const int8_t *input, int8_t *output,
         acc += (int64_t)input_offset * w;
 
         int32_t requantized = arm_nn_requantize((int32_t)acc, multiplier, shift);
+        
+#if PACI_TRACE_REQUANT
+        // Compute exact float value before rounding
+        int64_t new_val = (int64_t)acc * (int64_t)multiplier;
+        double exact = (double)new_val / (double)(1LL << (31 - shift));
+        double error = (double)requantized - exact;
+        paci_requant_error_sum += error;
+        paci_requant_error_count++;
+#endif
+
         int32_t val = requantized + output_offset;
         if (val < -128) val = -128;
         if (val > 127) val = 127;

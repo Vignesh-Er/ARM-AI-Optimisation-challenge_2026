@@ -1,3 +1,8 @@
+# PACI-Arm: Evidence-Proportional Inference on Arm
+
+## 0. TARGET DECLARATION — fill this in before starting
+AVAILABLE_HARDWARE: "none"
+
 # PACI: Physics-Informed Anomaly Classification for TinyML
 
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)

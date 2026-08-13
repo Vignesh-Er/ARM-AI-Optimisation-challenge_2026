@@ -10,18 +10,18 @@
   "model_artifacts": {"tier1": "tier1_model.tflite", "tier2": "tier2_model.tflite"},
   "units": {
     "tier0_ekf": {
-      "hot": {"value": 115758.043, "mad": 126.739}
+      "hot": {"value": 20441.608, "mad": 53.608}
     },
     "tier1_int4": {
-      "hot": {"value": 20010.979, "mad": 66.905},
-      "cold": {"value": 22200.000, "mad": 190.000},
+      "hot": {"value": 19968.576, "mad": 33.413},
+      "cold": {"value": 23440.000, "mad": 650.000},
       "scratch_bytes": 8192
     },
     "tier2_int8": {
-      "hot": {"value": 95805.870, "mad": 168.421},
-      "cold": {"value": 99850.000, "mad": 560.000},
+      "hot": {"value": 95605.939, "mad": 227.203},
+      "cold": {"value": 99510.000, "mad": 680.000},
       "scratch_bytes": 8192
     },
-    "cascade_trace": {"total": 16161400, "n1": 303, "n2": 90, "steps": 2000}
+    "cascade_trace": {"total": 8284900, "n1": 303, "n2": 11, "steps": 2000}
   }
 }

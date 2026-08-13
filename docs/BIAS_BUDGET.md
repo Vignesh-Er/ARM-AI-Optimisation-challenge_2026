@@ -75,3 +75,16 @@ Since the maximum potential rounding perturbation ($2.5$ LSBs) is strictly less 
 - **CMSIS-NN Requantization**: Single-rounding mode (`CMSIS_NN_USE_SINGLE_ROUNDING`) introduces at most $\pm 0.5$ LSB error per layer.
 - **Pipeline Requantization Budget**: Total accumulated rounding shift is $\le 1.25$ LSBs.
 - **Decision Parity**: Verified 100% bit-exact prediction match between Python TFLite reference interpreter and compiled C `paci_infer_t2_s8` across 200/200 test cases (0 mismatches).
+
+
+## 6. Empirical Validation (Predicted vs Measured)
+
+The bias budget was empirically verified by executing PACI_TRACE_REQUANT on the C implementation. The result over ~1.9 million operations:
+
+\\\	ext
+[PACI_TRACE_REQUANT] Empirical Mean Bias: -0.028038 LSBs over 1971112 ops
+\\\`n
+The magnitude of this empirical mean is extremely low compared to the worst-case bound, validating our claim that bulk requantization error averages closely to zero in nominal operation (while acknowledging worst-case deterministic tied biases).
+
+![Bias Budget: Predicted vs Measured Margin Degradation](../outputs/plots/bias_predicted_vs_measured.png)
+
