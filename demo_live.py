@@ -240,7 +240,7 @@ def run_c_cascade_demo():
     print(f"  {C.DIM}{'─' * 60}{C.RESET}")
     info("Workload Description", "Live dynamic sensor stream with injected fault phases")
     info("Total Samples Processed", f"{total_steps:,}")
-    info("Tier 0 (Physics-EKF) Filtered", f"{n0_count:,} steps", f"({cnn_avoided_pct:.1f}% CNN calls avoided)")
+    info("Tier 0 (Physics-EKF) Gate", f"{n0_count:,} steps", f"({cnn_avoided_pct:.1f}% required no CNN escalation)")
     info("Tier 1 (INT4 1D-CNN) Invocations", f"{n1_count:,} steps", f"({t1_pct:.1f}% escalation rate)")
     info("Tier 2 (INT8 1D-CNN) Invocations", f"{n2_count:,} steps", f"({t2_pct:.1f}% confirmation rate)")
     info("Demo Trace Compute Reduction", f"{compute_reduction_pct:.2f}%", f"({speedup:.2f}× speedup vs Always-On INT8)")
