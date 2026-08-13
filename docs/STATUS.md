@@ -589,13 +589,22 @@ Monotonic progression verified: 17,500 B < 45,144 B < 57,276 B < 106,344 B. Writ
 
 Created `bench/fvp_profile.py` automated cross-compilation and two-point instruction count differencing harness for Cortex-M55 + Helium on the Corstone-300 FVP. Documented in `docs/FVP_INSTRUCTIONS.md`.
 
+## Phase 4 — Honest Benchmark Rebuild & Stage-B Release Models (2026-08-13)
+
+- **Stage-B Release Models Trained** (`tools/train_release_models.py`): Trained `tier1_release.tflite` (INT4) and `tier2_release.tflite` (INT8) on 40 scenarios, verified BatchNorm folding, exported updated CMSIS-NN C headers `tier1_weights.h` and `tier2_weights.h`.
+- **Unit Tests Re-verified**: All 95 tests pass against the Stage-B release models (`pytest tests/ --tier1-model=outputs/models/tier1_release.tflite --tier2-model=outputs/models/tier2_release.tflite`).
+- **Defect D6 Fixed (Real Measured Costs)**: Replaced synthetic/invented numbers (`1.0` / `50.0`) in `phase6_benchmark/run_benchmarks.py` with Schema v2 measured execution latencies loaded dynamically from `outputs/bench/native-smoke.json`.
+- **Defect D7 Fixed (Honest Baseline Comparison)**: Moving Average evaluated on slow equipment drift demonstrates that MA adapts and misses slow drift (achieving only 75% detection), while PACI's physics-informed EKF achieves **84.4% CNN invocation reduction** with **100.0% fault detection** and only **4.5% false wake rate** (vs 12.3% on Kalman without physics and 29.4% on CUSUM).
+- **Clean Results Verified**: `tools/check_no_fixture_in_results.py` confirms clean zero-fixture state across `outputs/reports/`, `outputs/bench/`, and `README.md`.
+
 ## Phase checklist (Updated)
 
 - [x] Phase 0 — Compliance and hygiene
 - [x] Phase 1 — Unified C core
 - [x] Phase 2 — CMSIS-NN integration and export
 - [x] Phase 3 — Measurement harness (GATE 3.1–3.5 complete)
-- [ ] Phase 4 — Honest benchmark rebuild
+- [x] Phase 4 — Honest benchmark rebuild (Defects D6 & D7 resolved)
 - [ ] Phase 5 — Rounding-bias budget
 - [ ] Phase 6 — CI and docs polish
+
 
