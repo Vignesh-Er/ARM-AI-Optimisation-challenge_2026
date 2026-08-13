@@ -31,17 +31,29 @@ graph TD
 
 ## 📊 Measured Benchmark Results
 
-All figures reported below are directly sourced from Schema v2 execution logs in `outputs/bench/native-smoke.json` and static binary section analysis in `outputs/bench/footprint.json` compiled with `gcc 13.2.0 -O2 -fno-fast-math -ffp-contract=off`.
+All figures reported below are from local `x86_64-native` smoke testing (compiled with `gcc 13.2.0 -O2 -fno-fast-math -ffp-contract=off`). The official competition submission benchmark artifact (`aarch64-linux.json`) is generated cleanly on an authentic **Arm AArch64** environment via GitHub Actions CI (`ubuntu-24.04-arm`), ensuring verifiable and reproducible target hardware measurements.
 
 ### 1. Execution Latency (31 Measurement Batches)
 
-| Tier / Unit | Kernel / Algorithm | Hot Latency (Median ± MAD) | Cold Latency (64MB Thrash) | Scratch Arena |
+| Tier / Unit | Algorithm / Hardware Kernel | Hot Latency (Median) | Cold Latency (64MB Thrash) | Scratch Arena |
 |:---|:---|:---:|:---:|:---:|
-| **Tier 0 (EKF)** | Deal-Grove scalar EKF + NIS Gating | `23,982.12 ± 880.19 ns` | — | `0 B` |
-| **Tier 1 (INT4)** | CMSIS-NN 4-bit Conv1D (`arm_convolve_s4`) | `23,641.80 ± 557.84 ns` | `38,200.00 ± 3,050.00 ns` | `8,192 B` |
-| **Tier 2 (INT8)** | CMSIS-NN 8-bit Conv1D (`arm_convolve_wrapper_s8`) | `108,390.67 ± 2,977.01 ns` | `120,590.00 ± 4,940.00 ns` | `8,192 B` |
+| **Tier 0 (EKF)** | Physics-residual scalar EKF + statistical gating | `950.73 ns` | — | `0 B` |
+| **Tier 1 (INT4)** | CMSIS-NN 4-bit Conv1D (`arm_convolve_s4`) | `22,495.66 ns` | `31,340.00 ns` | `8,192 B` |
+| **Tier 2 (INT8)** | CMSIS-NN 8-bit Conv1D (`arm_convolve_wrapper_s8`) | `106,185.68 ns` | `111,530.00 ns` | `8,192 B` |
 
-### 2. Static Binary Footprint & Differencing (`-Wl,--gc-sections`)
+### 2. Cascade Trace Results (2,000 steps sequence)
+
+| Cascade Metric | Realized Value | Performance Analysis |
+|:---|:---:|:---|
+| **Total Evaluation Time** | `21.73 ms` | Cumulative trace execution time |
+| **Tier 1 Invocations ($N_1$)** | `303` | Escalation rate: **15.15%** (84.85% filtered by Tier 0) |
+| **Tier 2 Invocations ($N_2$)** | `90` | Escalation rate: **4.50%** (70.30% resolved by Tier 1) |
+| **Effective Per-Step Cost** | `10.86 µs/step` | Realized amortized execution cost per sample |
+| **Always-On Tier 2 Baseline** | `107.98 µs/step` | Un-gated Tier 2 execution on every step (measured) |
+| **Compute Latency Reduction** | **89.94%** | Relative savings vs Always-On Tier 2 baseline |
+| **Effective Speedup Factor** | **9.94×** | Realized acceleration from adaptive tri-tier gating |
+
+### 3. Static Binary Footprint & Differencing (`-Wl,--gc-sections`)
 
 | Build Variant Target | `.text` (Flash Code) | `.data` (Init Data) | `.bss` (Uninit RAM) | Flash Footprint | RAM Footprint |
 |:---|:---:|:---:|:---:|:---:|:---:|
@@ -52,12 +64,6 @@ All figures reported below are directly sourced from Schema v2 execution logs in
 
 - **Tier 1 INT4 Flash/RAM Delta**: $+27,644\text{ B}$ Flash ($+27.00\text{ KB}$), $+9,296\text{ B}$ RAM ($+9.08\text{ KB}$)
 - **Tier 2 INT8 Flash/RAM Delta**: $+12,132\text{ B}$ Flash ($+11.85\text{ KB}$), $+3,152\text{ B}$ RAM ($+3.08\text{ KB}$)
-
-### 3. Baseline Method Comparison (Release Models & Severity Ladder)
-
-| Method | CNN Runs | CNN Reduction | Fault Detection Rate | False Wake Rate | Time / Energy Savings |
-|:---|:---:|:---:|:---:|:---:|:---:|
-| **PACI (Physics + EKF + NIS Gate)** | **312** | **84.4%** | **100.0%** | **4.5%** | **65.0%** |
 | Always-On CNN | 2000 | 0.0% | 100.0% | 100.0% | 0.0% |
 | Moving Average | 79 | 96.0% | 75.0% | 3.7% | 95.6% |
 | Kalman (No Physics) | 341 | 83.0% | 100.0% | 12.3% | 82.5% |
