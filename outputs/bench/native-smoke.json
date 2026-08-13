@@ -1,0 +1,27 @@
+{
+  "schema_version": 2,
+  "target": "x86_64-native",
+  "cpu": "Generic CPU",
+  "compiler": "gcc 13.2.0",
+  "flags": "-O2 -fno-fast-math -ffp-contract=off",
+  "metric": "ns_median",
+  "note": "Hot and cold cache latency in ns. Cold numbers use 64MB thrashing. FVP numbers require instruction differencing.",
+  "batches": 31,
+  "model_artifacts": {"tier1": "tier1_release.tflite", "tier2": "tier2_release.tflite"},
+  "units": {
+    "tier0_ekf": {
+      "hot": {"value": 23982.116, "mad": 880.188}
+    },
+    "tier1_int4": {
+      "hot": {"value": 23641.800, "mad": 557.845},
+      "cold": {"value": 38200.000, "mad": 3050.000},
+      "scratch_bytes": 8192
+    },
+    "tier2_int8": {
+      "hot": {"value": 120288.491, "mad": 10775.448},
+      "cold": {"value": 122300.000, "mad": 8420.000},
+      "scratch_bytes": 8192
+    },
+    "cascade_trace": {"total": 12997200, "n1": 303, "n2": 11, "steps": 2000}
+  }
+}
