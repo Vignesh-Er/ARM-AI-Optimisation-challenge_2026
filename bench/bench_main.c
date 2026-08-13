@@ -389,10 +389,10 @@ int main(int argc, char **argv) {
     strncpy(report.note, "Hot and cold cache latency in ns. Cold numbers use 64MB thrashing.", sizeof(report.note)-1);
     strncpy(report.git_commit, "unknown", sizeof(report.git_commit)-1); // Set via CI
     strncpy(report.timestamp, "1970-01-01T00:00:00Z", sizeof(report.timestamp)-1); // Set via CI
-    strncpy(report.cmsis_nn_version, "unknown", sizeof(report.cmsis_nn_version)-1);
+    strncpy(report.cmsis_nn_version, "v7.0.0", sizeof(report.cmsis_nn_version)-1);
     report.batches = N_MEASURED_BATCHES;
-    strncpy(report.tier1_artifact, "tier1_model.tflite", sizeof(report.tier1_artifact)-1);
-    strncpy(report.tier2_artifact, "tier2_model.tflite", sizeof(report.tier2_artifact)-1);
+    strncpy(report.tier1_artifact, "outputs/models/tier1_release.tflite", sizeof(report.tier1_artifact)-1);
+    strncpy(report.tier2_artifact, "outputs/models/tier2_release.tflite", sizeof(report.tier2_artifact)-1);
     const char *filter = NULL;
     if (argc > 2) {
         filter = argv[2];
