@@ -1,0 +1,11 @@
+# Ensure consistent LF line endings for generated headers and source code.
+# This prevents core.autocrlf=true on Windows from converting LF to CRLF
+# on checkout, which would break byte-exact comparison tests
+# (test_params_sync.py).
+*.h text eol=lf
+*.c text eol=lf
+*.py text eol=lf
+*.yml text eol=lf
+*.md text eol=lf
+*.json text eol=lf
+*.txt text eol=lf
