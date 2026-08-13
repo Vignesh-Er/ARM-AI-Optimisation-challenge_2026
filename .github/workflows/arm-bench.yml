@@ -81,7 +81,7 @@ jobs:
 
       - name: Run pytest test suite
         run: |
-          python -m pytest tests/ -v
+          python -m pytest tests/ -v --tier1-model=outputs/models/tier1_release.tflite --tier2-model=outputs/models/tier2_release.tflite
 
       - name: Run native benchmark binary
         run: |

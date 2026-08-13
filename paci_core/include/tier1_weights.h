@@ -8,19 +8,19 @@
 #define PACI_EXPORT_SHA "f5082f36667fcde6"
 
 // tier1_conv1 (CONV_2D), weight shape [8, 1, 5, 1]
-static const int8_t tier1_conv1_weight[40] = {45, 26, 6, 127, 43, 127, 48, -63, -64, -51, -47, 47, 18, -127, 71, -67, 84, 127, 70, 30, 104, 5, -56, 66, -127, -73, -127, 93, 15, 96, -26, 109, 127, -86, -55, -75, 37, -10, 3, 127};
-static const int32_t tier1_conv1_bias[8] = {-2594, -91, -313, 1910, 556, -193, -1618, -376};
-static const int32_t tier1_conv1_multiplier[8] = {1798035308, 1213454998, 1185578175, 2010246286, 1324203764, 1326644838, 1435782278, 1381856043};
-static const int32_t tier1_conv1_shift[8] = {-9, -6, -6, -10, -6, -6, -7, -7};
-#define TIER1_CONV1_INPUT_OFFSET 83
+static const int8_t tier1_conv1_weight[40] = {-22, -5, -29, 127, -62, -86, -53, 7, 127, 2, 21, 119, -16, -127, 1, 36, 59, -53, -127, 82, -127, -74, 55, 40, 76, -107, -72, 127, 27, 35, -127, 56, 70, -7, 66, -29, 2, -127, 39, 104};
+static const int32_t tier1_conv1_bias[8] = {123, -9, -24, -646, -711, 1655, -4473, -429};
+static const int32_t tier1_conv1_multiplier[8] = {1461673870, 1301162368, 1224166223, 1632196284, 1331341190, 1454783864, 1656333411, 1427304221};
+static const int32_t tier1_conv1_shift[8] = {-6, -6, -6, -6, -7, -7, -8, -6};
+#define TIER1_CONV1_INPUT_OFFSET 93
 #define TIER1_CONV1_OUTPUT_OFFSET -128
 #define TIER1_CONV1_N_CHANNELS 8
 
 // tier1_conv2 (CONV_2D, INT4 packed two-per-byte), weight shape [8, 1, 3, 8], per-channel clamps=[0, 0, 0, 0, 0, 0, 0, 0] (total=0)
-static const int8_t tier1_conv2_weight[96] = {97, -30, -12, 19, 60, 76, 2, 42, 112, -37, -63, 95, 95, 30, 124, -42, 35, 17, 28, 31, 29, 4, -4, -33, -14, 49, 33, -55, 18, 28, 34, 30, 0, -46, 67, 60, 126, 77, -45, 51, -18, -68, -94, 47, 78, 1, 84, -2, 16, -50, 58, -64, 126, 32, 1, -48, -28, 31, 94, -47, -60, -2, -78, -45, -34, 61, -5, -57, -30, -1, -101, -62, 126, -17, -111, 53, 45, -69, -47, -2, 31, 78, 37, 19, 14, 48, 1, -21, -1, 25, -12, -21, 124, 51, -99, -79};
-static const int32_t tier1_conv2_bias[8] = {-28, 60, -64, -54, 77, 114, -45, 66};
-static const int32_t tier1_conv2_multiplier[8] = {1580571411, 1482111427, 1931451080, 1103091082, 1304696904, 1644482287, 2073387586, 1413289388};
-static const int32_t tier1_conv2_shift[8] = {-4, -2, -2, -3, -3, -4, -4, -4};
+static const int8_t tier1_conv2_weight[96] = {126, 16, 13, 42, 30, 14, 15, -52, 2, 95, 0, -75, 78, 18, 66, 121, 33, 29, 33, 44, 46, 82, 15, -82, 94, -90, -14, 45, 61, 0, 33, -86, -46, -31, 13, -98, 17, 47, 75, -48, 27, -15, 16, 60, 33, -107, -31, 32, 2, 47, 109, -50, 11, -15, -14, 12, 112, -108, -64, 81, 16, -44, -31, -76, 112, -108, -52, 29, 31, -47, 51, 28, 1, 3, 13, -31, -1, -32, -16, 1, 18, -12, -31, 112, 63, 17, -3, 115, -51, 31, -16, 16, 65, 33, 65, 31};
+static const int32_t tier1_conv2_bias[8] = {0, -61, 4, -38, -25, 4, 27, -21};
+static const int32_t tier1_conv2_multiplier[8] = {1604792977, 1619042900, 2052339423, 2104487457, 1525160886, 1799014685, 1178770368, 2097336622};
+static const int32_t tier1_conv2_shift[8] = {-1, -2, -2, -1, -1, -1, -1, -2};
 #define TIER1_CONV2_INPUT_OFFSET 128
 #define TIER1_CONV2_OUTPUT_OFFSET -128
 #define TIER1_CONV2_N_CHANNELS 8
@@ -28,15 +28,15 @@ static const int32_t tier1_conv2_shift[8] = {-4, -2, -2, -3, -3, -4, -4, -4};
 // tier1_gap (MEAN / GlobalAveragePooling1D)
 #define TIER1_GAP_INPUT_OFFSET 128
 #define TIER1_GAP_OUTPUT_OFFSET -128
-#define TIER1_GAP_MULTIPLIER 1269313929
-#define TIER1_GAP_SHIFT -1
+#define TIER1_GAP_MULTIPLIER 1935798148
+#define TIER1_GAP_SHIFT -2
 
 // tier1_logits (FULLY_CONNECTED, INT4 packed two-per-byte, PER-TENSOR quant -- arm_fully_connected_s4 has no per-channel variant), weight shape [2, 8], clamps=0
-static const int8_t tier1_logits_weight[8] = {34, 105, -45, -15, -52, -27, 45, 59};
-static const int32_t tier1_logits_bias[2] = {95, -95};
-#define TIER1_LOGITS_MULTIPLIER 1261453817
+static const int8_t tier1_logits_weight[8] = {68, -92, -87, 4, -51, 125, 71, -35};
+static const int32_t tier1_logits_bias[2] = {-12, 12};
+#define TIER1_LOGITS_MULTIPLIER 1498722186
 #define TIER1_LOGITS_SHIFT -3
 #define TIER1_LOGITS_INPUT_OFFSET 128
-#define TIER1_LOGITS_OUTPUT_OFFSET 28
+#define TIER1_LOGITS_OUTPUT_OFFSET -5
 
 #endif // PACI_TIER1_WEIGHTS_H

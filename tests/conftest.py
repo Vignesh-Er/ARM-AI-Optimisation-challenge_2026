@@ -9,8 +9,13 @@ import os
 import pytest
 
 _PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-DEFAULT_TIER1_MODEL = os.path.join(_PROJECT_ROOT, "outputs", "models", "tier1_fixture.tflite")
-DEFAULT_TIER2_MODEL = os.path.join(_PROJECT_ROOT, "outputs", "models", "tier2_fixture.tflite")
+_RELEASE_TIER1 = os.path.join(_PROJECT_ROOT, "outputs", "models", "tier1_release.tflite")
+_RELEASE_TIER2 = os.path.join(_PROJECT_ROOT, "outputs", "models", "tier2_release.tflite")
+_FIXTURE_TIER1 = os.path.join(_PROJECT_ROOT, "outputs", "models", "tier1_fixture.tflite")
+_FIXTURE_TIER2 = os.path.join(_PROJECT_ROOT, "outputs", "models", "tier2_fixture.tflite")
+
+DEFAULT_TIER1_MODEL = _RELEASE_TIER1 if os.path.isfile(_RELEASE_TIER1) else _FIXTURE_TIER1
+DEFAULT_TIER2_MODEL = _RELEASE_TIER2 if os.path.isfile(_RELEASE_TIER2) else _FIXTURE_TIER2
 
 
 def pytest_addoption(parser):
