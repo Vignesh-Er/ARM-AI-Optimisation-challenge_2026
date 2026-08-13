@@ -10,7 +10,9 @@ PACI is a physics-informed 3-tier cascade for Arm Cortex-M-class edge AI that av
 
 ## 🏆 Competition Contributions (Arm AI Optimization Challenge 2026)
 
-This repository builds upon theoretical work to provide a defensible, production-ready embedded implementation for the Arm AI Optimization Challenge. Our specific contributions for this challenge are explicitly delineated below:
+**Challenge Track:** Physical AI
+
+This repository builds upon theoretical work to provide a defensible, production-ready embedded implementation for the Arm AI Optimization Challenge (Physical AI track). Our specific contributions for this challenge are explicitly delineated below:
 
 1. **Python/PACI Baseline**: We ported the theoretical model (from the upstream `Karthikdebuger/PACI` repository) into a fully functional training and quantization pipeline.
 2. **Embedded C Core (`paci_core`)**: The entire C implementation—including the state machine, circular buffers, C-EKF, and zero-allocation cascade logic—is 100% original work written specifically for this challenge.
