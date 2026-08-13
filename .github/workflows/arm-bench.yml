@@ -92,19 +92,23 @@ jobs:
         run: |
           python tools/check_no_fixture_in_results.py
 
-      - name: Generate benchmark report
+      - name: Generate aarch64 benchmark report
         run: |
           mkdir -p outputs/reports outputs/plots
-          python bench/report.py outputs/bench/aarch64-linux.json --output-md outputs/reports/bench_report.md --output-plot outputs/plots/bench_breakdown.png
+          python bench/report.py outputs/bench/aarch64-linux.json --output-md outputs/reports/aarch64_bench_report.md --output-plot outputs/plots/aarch64_bench_breakdown.png
+
+      - name: Generate native-smoke report for README verification
+        run: |
+          python bench/report.py outputs/bench/native-smoke.json --output-md outputs/reports/bench_report.md --no-plot
 
       - name: Verify README benchmark synchronization
         run: |
           python tools/verify_readme.py
 
-      - name: Publish report to Step Summary
+      - name: Publish aarch64 report to Step Summary
         run: |
-          if [ -f outputs/reports/bench_report.md ]; then
-            cat outputs/reports/bench_report.md >> $GITHUB_STEP_SUMMARY
+          if [ -f outputs/reports/aarch64_bench_report.md ]; then
+            cat outputs/reports/aarch64_bench_report.md >> $GITHUB_STEP_SUMMARY
           fi
 
       - name: Upload outputs artifact
