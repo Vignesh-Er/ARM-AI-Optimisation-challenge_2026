@@ -26,11 +26,13 @@ graph TD
     B --> C{"NIS Gating Check\n(nis > χ²₉₅ = 3.841)"}
     C -- "Normal Operation (NIS ≤ 3.841)" --> D["Sleep / Skip Neural Inference\n(~465 ns per step)"]
     C -- "Anomaly Detected (NIS > 3.841)" --> E["Tier 1: INT4 1D-CNN Screen\n(arm_convolve_s4, 216 B weights)"]
-    E --> F{"Tier 1 Decision\n(class != 0 OR low margin)"}
-    F -- "Screening Resolved" --> G["Report Anomaly / Clear"]
-    F -- "High Severity / Ambiguous" --> H["Tier 2: INT8 1D-CNN Classifier\n(arm_convolve_wrapper_s8, 11.8 KB)"]
+    E --> F{"Tier 1 Decision\n(class != 0 OR Watchdog)"}
+    F -- "Screening Resolved (class == 0)" --> G["Report Anomaly / Clear"]
+    F -- "Confirmed Fault / Audit" --> H["Tier 2: INT8 1D-CNN Classifier\n(arm_convolve_wrapper_s8, 11.8 KB)"]
     H --> I["5-Class Fault Classification"]
 ```
+
+> **Note on Escalation Logic:** Margin-based escalation is scaffolded in the C core but inactive at the configured operational threshold (`margin_thresh = 0`); active Tier-2 escalation is class-based and watchdog-driven.
 
 ---
 

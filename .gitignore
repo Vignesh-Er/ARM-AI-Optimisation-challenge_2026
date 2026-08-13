@@ -13,9 +13,12 @@ ENV/
 env.bak/
 venv.bak/
 
-# Project files
 outputs/models/*.h5
 outputs/models/*.tflite
+!outputs/models/tier1_fixture.tflite
+!outputs/models/tier2_fixture.tflite
+!outputs/models/tier1_release.tflite
+!outputs/models/tier2_release.tflite
 # Keep the plots for the README, but ignore raw data if we generated any
 outputs/data/
 
