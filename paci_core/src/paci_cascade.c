@@ -18,7 +18,7 @@
 // provisional, not representative of the final input distribution.
 #define PACI_PROVISIONAL_INPUT_SCALE 0.25f
 
-static int8_t quantize_measurement(float z) {
+int8_t quantize_measurement(float z) {
     float norm = (z - PACI_ETCH_RATE_NOMINAL) / PACI_NORM_SCALE;
     float q = norm / PACI_PROVISIONAL_INPUT_SCALE;
     q = floorf(q + 0.5f);
@@ -73,6 +73,19 @@ paci_status_t paci_init(paci_ctx_t *ctx, float x0, float P0) {
 // PACI_E_UNPRIMED) or the CMSIS-NN weights aren't built in
 // (PACI_E_QUANT) — there is no window to classify yet in the first case,
 // and nothing this function can do about the second.
+paci_status_t paci_tier0_step(paci_ctx_t *ctx, float z,
+                               float u_pressure, float u_temp,
+                               float u_power, float u_flow,
+                               float *out_nis) {
+    if (ctx == NULL || out_nis == NULL) {
+        return PACI_E_NULL;
+    }
+    float pred_physics = paci_physics_predict(u_pressure, u_temp, u_power, u_flow);
+    paci_status_t status = paci_ekf_step(&ctx->ekf, z, pred_physics, out_nis);
+    paci_ring_push(&ctx->ring, quantize_measurement(z));
+    return status;
+}
+
 paci_status_t paci_step(paci_ctx_t *ctx,
                          float z,
                          float u_pressure, float u_temp,
@@ -88,13 +101,9 @@ paci_status_t paci_step(paci_ctx_t *ctx,
 
     ctx->step_count++;
 
-    float pred_physics = paci_physics_predict(u_pressure, u_temp, u_power, u_flow);
-
     float nis = 0.0f;
-    paci_status_t ekf_status = paci_ekf_step(&ctx->ekf, z, pred_physics, &nis);
+    paci_status_t ekf_status = paci_tier0_step(ctx, z, u_pressure, u_temp, u_power, u_flow, &nis);
     out->nis = nis;
-
-    paci_ring_push(&ctx->ring, quantize_measurement(z));
 
     if (ctx->step_count <= PACI_BURN_IN_STEPS) {
         out->wake_reason = PACI_WAKE_BURN_IN;

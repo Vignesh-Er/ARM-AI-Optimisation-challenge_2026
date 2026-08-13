@@ -79,8 +79,8 @@ def validate_and_parse_schema_v2(data: Any) -> Dict[str, Any]:
             raise KeyError(f"Missing required top-level field in Schema v2 benchmark JSON: '{k}'")
 
     schema_version = _validate_int(data["schema_version"], "schema_version", min_val=1)
-    if schema_version != 2:
-        raise ValueError(f"Unsupported schema_version {schema_version}; expected 2")
+    if schema_version != 3:
+        raise ValueError(f"Unsupported schema_version {schema_version}; expected 3")
 
     target = _validate_str(data["target"], "target")
     cpu = _validate_str(data["cpu"], "cpu", allow_empty=True)
@@ -109,29 +109,36 @@ def validate_and_parse_schema_v2(data: Any) -> Dict[str, Any]:
         u_dict = _validate_dict(units[unit_name], f"units.{unit_name}")
         if "hot" not in u_dict:
             raise KeyError(f"Missing 'hot' measurement in units.{unit_name}")
+        
+        def parse_stats(stat_dict, prefix):
+            req_keys = ("mean", "median", "min", "max", "mad", "samples")
+            for k in req_keys:
+                if k not in stat_dict:
+                    raise KeyError(f"{prefix} must contain '{k}'")
+            return {
+                "mean": _validate_number(stat_dict["mean"], f"{prefix}.mean"),
+                "median": _validate_number(stat_dict["median"], f"{prefix}.median"),
+                "min": _validate_number(stat_dict["min"], f"{prefix}.min"),
+                "max": _validate_number(stat_dict["max"], f"{prefix}.max"),
+                "mad": _validate_number(stat_dict["mad"], f"{prefix}.mad"),
+                "samples": _validate_int(stat_dict["samples"], f"{prefix}.samples")
+            }
+
         hot_dict = _validate_dict(u_dict["hot"], f"units.{unit_name}.hot")
-        if "value" not in hot_dict or "mad" not in hot_dict:
-            raise KeyError(f"units.{unit_name}.hot must contain 'value' and 'mad'")
+        parsed_hot = parse_stats(hot_dict, f"units.{unit_name}.hot")
 
-        hot_val = _validate_number(hot_dict["value"], f"units.{unit_name}.hot.value")
-        hot_mad = _validate_number(hot_dict["mad"], f"units.{unit_name}.hot.mad")
-
-        cold_data: Optional[Dict[str, float]] = None
+        parsed_cold = None
         if "cold" in u_dict and u_dict["cold"] is not None:
             cold_dict = _validate_dict(u_dict["cold"], f"units.{unit_name}.cold")
-            if "value" not in cold_dict or "mad" not in cold_dict:
-                raise KeyError(f"units.{unit_name}.cold must contain 'value' and 'mad'")
-            cold_val = _validate_number(cold_dict["value"], f"units.{unit_name}.cold.value")
-            cold_mad = _validate_number(cold_dict["mad"], f"units.{unit_name}.cold.mad")
-            cold_data = {"value": cold_val, "mad": cold_mad}
+            parsed_cold = parse_stats(cold_dict, f"units.{unit_name}.cold")
 
         scratch_bytes: Optional[int] = None
         if "scratch_bytes" in u_dict and u_dict["scratch_bytes"] is not None:
             scratch_bytes = _validate_int(u_dict["scratch_bytes"], f"units.{unit_name}.scratch_bytes", min_val=-1)
 
         parsed_units[unit_name] = {
-            "hot": {"value": hot_val, "mad": hot_mad},
-            "cold": cold_data,
+            "hot": parsed_hot,
+            "cold": parsed_cold,
             "scratch_bytes": scratch_bytes,
         }
 
@@ -270,19 +277,19 @@ def generate_markdown_report(data: Dict[str, Any]) -> str:
     unit_label = "ns" if "ns" in metric.lower() else ("cycles" if "cycle" in metric.lower() else metric)
 
     # Latencies
-    t0_hot = units["tier0_ekf"]["hot"]["value"]
+    t0_hot = units["tier0_ekf"]["hot"]["median"]
     t0_mad = units["tier0_ekf"]["hot"]["mad"]
 
-    t1_hot = units["tier1_int4"]["hot"]["value"]
+    t1_hot = units["tier1_int4"]["hot"]["median"]
     t1_hot_mad = units["tier1_int4"]["hot"]["mad"]
     t1_cold_obj = units["tier1_int4"]["cold"]
-    t1_cold_str = f"{t1_cold_obj['value']:.2f} ± {t1_cold_obj['mad']:.2f} {unit_label}" if t1_cold_obj else "—"
+    t1_cold_str = f"{t1_cold_obj['median']:.2f} ± {t1_cold_obj['mad']:.2f} {unit_label}" if t1_cold_obj else "—"
     t1_scratch = units["tier1_int4"]["scratch_bytes"]
 
-    t2_hot = units["tier2_int8"]["hot"]["value"]
+    t2_hot = units["tier2_int8"]["hot"]["median"]
     t2_hot_mad = units["tier2_int8"]["hot"]["mad"]
     t2_cold_obj = units["tier2_int8"]["cold"]
-    t2_cold_str = f"{t2_cold_obj['value']:.2f} ± {t2_cold_obj['mad']:.2f} {unit_label}" if t2_cold_obj else "—"
+    t2_cold_str = f"{t2_cold_obj['median']:.2f} ± {t2_cold_obj['mad']:.2f} {unit_label}" if t2_cold_obj else "—"
     t2_scratch = units["tier2_int8"]["scratch_bytes"]
 
     # Cascade trace calculations
@@ -312,17 +319,32 @@ def generate_markdown_report(data: Dict[str, Any]) -> str:
     lines: List[str] = [
         f"# PACI Benchmark Report: `{target}`",
         "",
-        f"> Automated hardware benchmark evaluation conforming to **Schema v2** on **{target}**.",
+        f"> Automated hardware benchmark evaluation conforming to **Schema v3** on **{target}**.",
         "",
         "## 1. Execution Latency",
         "",
-        f"Measured across **{batches} batches** using median and Median Absolute Deviation (MAD).",
+        f"Measured across **{batches} batches**. Initialization and setup are excluded from per-sample measurements.",
         "",
-        f"| Tier / Execution Unit | Algorithm / Hardware Kernel | Hot Latency (Median ± MAD) | Cold Latency (Median ± MAD) | Scratch Buffer |",
-        f"|:---|:---|:---:|:---:|:---:|",
-        f"| **Tier 0 (EKF)** | Physics-residual scalar EKF + statistical gating | `{t0_hot:.2f} ± {t0_mad:.2f} {unit_label}` | — | N/A (0 B) |",
-        f"| **Tier 1 (INT4)** | CMSIS-NN 4-bit Conv1D classifier (`arm_convolve_s4`) | `{t1_hot:.2f} ± {t1_hot_mad:.2f} {unit_label}` | `{t1_cold_str}` | {_format_bytes(t1_scratch)} |",
-        f"| **Tier 2 (INT8)** | CMSIS-NN 8-bit Conv1D classifier (`arm_convolve_wrapper_s8`) | `{t2_hot:.2f} ± {t2_hot_mad:.2f} {unit_label}` | `{t2_cold_str}` | {_format_bytes(t2_scratch)} |",
+        f"| Tier / Execution Unit | Hot Latency (Median ± MAD) | Cold Latency (Median ± MAD) | Scratch Buffer |",
+        f"|:---|:---:|:---:|:---:|",
+        f"| **Tier 0 (EKF)** | `{t0_hot:.2f} ± {t0_mad:.2f} {unit_label}` | — | N/A (0 B) |",
+        f"| **Tier 1 (INT4)** | `{t1_hot:.2f} ± {t1_hot_mad:.2f} {unit_label}` | `{t1_cold_str}` | {_format_bytes(t1_scratch)} |",
+        f"| **Tier 2 (INT8)** | `{t2_hot:.2f} ± {t2_hot_mad:.2f} {unit_label}` | `{t2_cold_str}` | {_format_bytes(t2_scratch)} |",
+        "",
+        "### Statistical Detail",
+        "| Component | Mean | Min | Max | Samples |",
+        "|:---|:---:|:---:|:---:|:---:|",
+    ]
+
+    for label, u in [("Tier 0 Hot", units["tier0_ekf"]["hot"]),
+                     ("Tier 1 Hot", units["tier1_int4"]["hot"]),
+                     ("Tier 1 Cold", units["tier1_int4"]["cold"]),
+                     ("Tier 2 Hot", units["tier2_int8"]["hot"]),
+                     ("Tier 2 Cold", units["tier2_int8"]["cold"])]:
+        if u:
+            lines.append(f"| {label} | {u['mean']:.2f} | {u['min']:.2f} | {u['max']:.2f} | {u['samples']} |")
+
+    lines.extend([
         "",
         "## 2. Cascade Trace Results",
         "",
@@ -335,33 +357,28 @@ def generate_markdown_report(data: Dict[str, Any]) -> str:
         f"| **Tier 1 Invocations ($N_1$)** | `{n1:,}` | Escalation rate: **{n1_rate_pct:.2f}%** ({t0_filter_pct:.2f}% filtered by Tier 0) |",
         f"| **Tier 2 Invocations ($N_2$)** | `{n2:,}` | Escalation rate: **{n2_rate_pct:.2f}%** ({t1_filter_pct:.2f}% resolved by Tier 1) |",
         f"| **Effective Per-Step Latency** | `{effective_step_cost:.2f} {unit_label}/step` | Realized amortized execution cost per sample |",
-        f"| **Theoretical Decomposed Cost** | `{theoretical_step_cost:.2f} {unit_label}/step` | $T_0 + \\frac{{N_1}}{{N}} T_1 + \\frac{{N_2}}{{N}} T_2$ model prediction |",
         f"| **Always-On Tier 2 Baseline** | `{always_on_tier2_cost:.2f} {unit_label}/step` | Un-gated Tier 2 execution on every step |",
         f"| **Compute Latency Reduction** | **{savings_pct:.2f}%** | Relative savings vs Always-On Tier 2 baseline |",
         f"| **Effective Speedup Factor** | **{speedup:.2f}×** | Realized acceleration from adaptive tri-tier gating |",
         "",
+        "> **Note:** The PACI cascade reduces computational work by {:.1f}%, providing a strong proxy for reduced dynamic compute energy.".format(savings_pct),
+        "",
         "## 3. Memory & Static Footprint",
         "",
-    ]
+    ])
 
     if footprint and footprint.get("variants"):
-        variants = footprint["variants"]
+        variants = footprint.get("variants", {})
         deltas = footprint.get("per_tier_delta", {})
         lines.extend([
             "### Binary Configuration Variants",
             "",
-            "| Variant Configuration | Text (Flash) | Data (Init) | BSS (Zero-Init) | Total Static Footprint | Scope / Description |",
-            "|:---|:---:|:---:|:---:|:---:|:---|",
+            "| Variant Configuration | Text (Flash) | Data (Init) | BSS (Zero-Init) | Total Static Footprint |",
+            "|:---|:---:|:---:|:---:|:---:|",
         ])
         for v_name, v_data in variants.items():
-            desc = {
-                "core_only": "Physics model, scalar EKF, ring buffer only",
-                "core+tier1": "Core + INT4 CMSIS-NN inference engine",
-                "core+tier2": "Core + INT8 CMSIS-NN inference engine",
-                "full": "Complete tri-tier cascade pipeline",
-            }.get(v_name, "Target configuration build")
             lines.append(
-                f"| `{v_name}` | `{_format_bytes(v_data['text'])}` | `{_format_bytes(v_data['data'])}` | `{_format_bytes(v_data['bss'])}` | `{_format_bytes(v_data['total'])}` | {desc} |"
+                f"| `{v_name}` | `{_format_bytes(v_data['text'])}` | `{_format_bytes(v_data['data'])}` | `{_format_bytes(v_data['bss'])}` | `{_format_bytes(v_data['total'])}` |"
             )
         lines.append("")
 
@@ -380,44 +397,25 @@ def generate_markdown_report(data: Dict[str, Any]) -> str:
             lines.append("")
 
     lines.extend([
-        "### Scratch Buffer Allocations",
-        "",
-        "| Tier Component | Scratch Memory Allocation | Storage Location | Reusability Semantics |",
-        "|:---|:---:|:---|:---|",
-        f"| **Tier 0 (EKF)** | `0 B` | Stack | Stack-allocated scalar operations only |",
-        f"| **Tier 1 (INT4)** | `{_format_bytes(t1_scratch)}` | Static RAM Arena | Reusable activation arena (shared sequentially) |",
-        f"| **Tier 2 (INT8)** | `{_format_bytes(t2_scratch)}` | Static RAM Arena | Reusable activation arena (shared sequentially) |",
-        "",
-    ])
-
-    if not (footprint and footprint.get("variants")):
-        lines.extend([
-            "> [!NOTE]",
-            "> Static binary section sizes (`.text`, `.data`, `.bss`) were not recorded in this benchmark artifact. Scratch buffer requirements are reported directly from execution unit metadata.",
-            "",
-        ])
-
-    lines.extend([
         "## 4. Platform & Build Metadata",
         "",
-        "| Configuration Property | Value | Description / Scope |",
-        "|:---|:---|:---|",
-        f"| **Target Platform** | `{target}` | Hardware benchmark deployment target |",
-        f"| **CPU / Core** | `{cpu}` | Host or target microarchitecture |",
-        f"| **Compiler** | `{compiler}` | Toolchain used for C harness compilation |",
-        f"| **Compiler Flags** | `{flags}` | Optimization and IEEE-754 compliance flags |",
-        f"| **Primary Metric** | `{metric}` | Timing metric reported by benchmark units |",
-        f"| **Measurement Batches** | `{batches}` | Statistical sample count for median / MAD |",
-        f"| **Tier 1 Artifact** | `{artifacts['tier1']}` | INT4 model flatbuffer / weight source |",
-        f"| **Tier 2 Artifact** | `{artifacts['tier2']}` | INT8 model flatbuffer / weight source |",
-        f"| **Schema Version** | `v{data['schema_version']}` | PACI Benchmark JSON Schema specification |",
-        f"| **Harness Notes** | {note} | Operational notes and execution details |",
+        "| Configuration Property | Value |",
+        "|:---|:---|",
+        f"| **Target Platform** | `{target}` |",
+        f"| **CPU / Core** | `{cpu}` |",
+        f"| **Compiler** | `{compiler} {data.get('compiler_version', '')}` |",
+        f"| **Build Type** | `{data.get('build_type', 'Unknown')}` |",
+        f"| **Compiler Flags** | `{flags}` |",
+        f"| **Git Commit** | `{data.get('git_commit', 'unknown')}` |",
+        f"| **Timestamp** | `{data.get('timestamp', '')}` |",
+        f"| **Primary Metric** | `{metric}` |",
+        f"| **Measurement Batches** | `{batches}` |",
+        f"| **Schema Version** | `v{data['schema_version']}` |",
+        f"| **Harness Notes** | {note} |",
         "",
     ])
 
     return "\n".join(lines)
-
-
 def generate_plots(data: Dict[str, Any], output_path: str) -> bool:
     """Generates execution latency and cascade breakdown visual plots."""
     try:
@@ -434,19 +432,19 @@ def generate_plots(data: Dict[str, Any], output_path: str) -> bool:
     metric = data["metric"]
     unit_label = "ns" if "ns" in metric.lower() else ("cycles" if "cycle" in metric.lower() else metric)
 
-    t0_hot = units["tier0_ekf"]["hot"]["value"]
+    t0_hot = units["tier0_ekf"]["hot"]["median"]
     t0_mad = units["tier0_ekf"]["hot"]["mad"]
 
-    t1_hot = units["tier1_int4"]["hot"]["value"]
+    t1_hot = units["tier1_int4"]["hot"]["median"]
     t1_hot_mad = units["tier1_int4"]["hot"]["mad"]
     t1_cold_obj = units["tier1_int4"]["cold"]
-    t1_cold = t1_cold_obj["value"] if t1_cold_obj else 0.0
+    t1_cold = t1_cold_obj["median"] if t1_cold_obj else 0.0
     t1_cold_mad = t1_cold_obj["mad"] if t1_cold_obj else 0.0
 
-    t2_hot = units["tier2_int8"]["hot"]["value"]
+    t2_hot = units["tier2_int8"]["hot"]["median"]
     t2_hot_mad = units["tier2_int8"]["hot"]["mad"]
     t2_cold_obj = units["tier2_int8"]["cold"]
-    t2_cold = t2_cold_obj["value"] if t2_cold_obj else 0.0
+    t2_cold = t2_cold_obj["median"] if t2_cold_obj else 0.0
     t2_cold_mad = t2_cold_obj["mad"] if t2_cold_obj else 0.0
 
     casc = units["cascade_trace"]

@@ -56,13 +56,22 @@ static double bench_median_of_sorted(const double *sorted, int n) {
 
 #define BENCH_MAX_SAMPLES 256
 
-void bench_median_mad(const double *values, int n, double *out_median, double *out_mad) {
+void bench_calc_stats(const double *values, int n, bench_stats_t *out_stats) {
+    if (n <= 0 || out_stats == NULL) return;
+    
     double sorted[BENCH_MAX_SAMPLES];
     double deviations[BENCH_MAX_SAMPLES];
     int count = (n > BENCH_MAX_SAMPLES) ? BENCH_MAX_SAMPLES : n;
 
+    double sum = 0.0;
+    double min_val = values[0];
+    double max_val = values[0];
+
     for (int i = 0; i < count; i++) {
         sorted[i] = values[i];
+        sum += values[i];
+        if (values[i] < min_val) min_val = values[i];
+        if (values[i] > max_val) max_val = values[i];
     }
     qsort(sorted, (size_t)count, sizeof(double), bench_compare_double);
     double median = bench_median_of_sorted(sorted, count);
@@ -73,8 +82,12 @@ void bench_median_mad(const double *values, int n, double *out_median, double *o
     }
     qsort(deviations, (size_t)count, sizeof(double), bench_compare_double);
 
-    *out_median = median;
-    *out_mad = bench_median_of_sorted(deviations, count);
+    out_stats->mean = sum / count;
+    out_stats->median = median;
+    out_stats->min = min_val;
+    out_stats->max = max_val;
+    out_stats->mad = bench_median_of_sorted(deviations, count);
+    out_stats->samples = count;
 }
 
 bool bench_pin_to_core(int core_id) {

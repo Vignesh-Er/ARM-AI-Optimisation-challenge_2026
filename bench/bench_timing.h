@@ -18,9 +18,18 @@ extern "C" {
 uint64_t bench_now_ns(void);
 bool bench_used_raw_clock(void);
 
+typedef struct {
+    double mean;
+    double median;
+    double min;
+    double max;
+    double mad;
+    int samples;
+} bench_stats_t;
+
 // Sorts a COPY of `values` (does not mutate the caller's array) and writes
-// the median and median-absolute-deviation to *out_median / *out_mad.
-void bench_median_mad(const double *values, int n, double *out_median, double *out_mad);
+// full statistics to *out_stats.
+void bench_calc_stats(const double *values, int n, bench_stats_t *out_stats);
 
 // `sched_setaffinity` to pin this process to one core. Linux-only (the
 // syscall does not exist elsewhere); logs and returns false rather than

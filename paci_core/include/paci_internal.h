@@ -41,6 +41,11 @@ paci_status_t paci_ekf_step(paci_ekf_t *ekf, float z, float pred_physics, float 
 // or a CMSIS-NN kernel call itself reports failure.
 paci_status_t paci_infer_t1_s4(const int8_t window[PACI_WINDOW_SIZE], int8_t *class_id, int32_t *margin);
 paci_status_t paci_infer_t2_s8(const int8_t window[PACI_WINDOW_SIZE], int8_t *class_id, int32_t *margin);
+int8_t quantize_measurement(float raw_z);
+paci_status_t paci_tier0_step(paci_ctx_t *ctx, float z,
+                               float u_pressure, float u_temp,
+                               float u_power, float u_flow,
+                               float *out_nis);
 
 #ifdef __cplusplus
 }

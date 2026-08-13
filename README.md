@@ -7,9 +7,19 @@ AVAILABLE_HARDWARE: "none"
 
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
 [![CI Status](https://img.shields.io/badge/CI-arm--bench_passing-brightgreen.svg)](.github/workflows/arm-bench.yml)
-[![Schema](https://img.shields.io/badge/Schema-v2_Schema_Validated-success.svg)](docs/BENCHMARKING.md)
+[![Schema](https://img.shields.io/badge/Schema-v3_Schema_Validated-success.svg)](docs/BENCHMARKING.md)
 
 PACI is an ultra-low-power 3-tier adaptive cascade architecture designed for resource-constrained Arm Cortex-M embedded microcontrollers and Linux edge systems monitoring semiconductor plasma etch processes. By coupling a scalar Extended Kalman Filter (EKF) with statistical Normalized Innovation Squared (NIS) gating, PACI filters non-anomalous process drift locally before escalating to 4-bit (INT4) and 8-bit (INT8) Convolutional Neural Network (CNN) classifiers.
+
+---
+
+## 🏆 Competition Contributions (Arm AI Optimization Challenge 2026)
+
+This repository builds upon theoretical work to provide a defensible, production-ready embedded implementation for the Arm AI Optimization Challenge. Our specific contributions for this challenge are explicitly delineated below:
+
+1. **Python/PACI Baseline**: We ported the theoretical model (from the upstream `Karthikdebuger/PACI` repository) into a fully functional training and quantization pipeline.
+2. **Embedded C Core (`paci_core`)**: The entire C implementation—including the state machine, circular buffers, C-EKF, and zero-allocation cascade logic—is 100% original work written specifically for this challenge.
+3. **Quantization & CMSIS-NN Validation**: We developed the TFLite quantization pipeline and achieved exact bit-matching validation against CMSIS-NN (`arm_convolve_s4` and `arm_convolve_wrapper_s8`) running natively and in the Corstone-300 FVP.
 
 ---
 
@@ -30,56 +40,72 @@ graph TD
 ---
 
 ## 📊 Measured Benchmark Results
+<!-- BENCHMARK:BEGIN -->
 
-All figures reported below are from local `x86_64-native` smoke testing (compiled with `gcc 13.2.0 -O2 -fno-fast-math -ffp-contract=off`). The official competition submission benchmark artifact (`aarch64-linux.json`) is generated cleanly on an authentic **Arm AArch64** environment via GitHub Actions CI (`ubuntu-24.04-arm`), ensuring verifiable and reproducible target hardware measurements.
 
-### 1. Execution Latency (31 Measurement Batches)
 
-| Tier / Unit | Algorithm / Hardware Kernel | Hot Latency (Median) | Cold Latency (64MB Thrash) | Scratch Arena |
-|:---|:---|:---:|:---:|:---:|
-| **Tier 0 (EKF)** | Physics-residual scalar EKF + statistical gating | `950.73 ns` | — | `0 B` |
-| **Tier 1 (INT4)** | CMSIS-NN 4-bit Conv1D (`arm_convolve_s4`) | `22,495.66 ns` | `31,340.00 ns` | `8,192 B` |
-| **Tier 2 (INT8)** | CMSIS-NN 8-bit Conv1D (`arm_convolve_wrapper_s8`) | `106,185.68 ns` | `111,530.00 ns` | `8,192 B` |
 
-### 2. Cascade Trace Results (2,000 steps sequence)
+# PACI Benchmark Report: `x86_64-native`
+
+> Automated hardware benchmark evaluation conforming to **Schema v3** on **x86_64-native**.
+
+## 1. Execution Latency
+
+Measured across **31 batches**. Initialization and setup are excluded from per-sample measurements.
+
+| Tier / Execution Unit | Hot Latency (Median ± MAD) | Cold Latency (Median ± MAD) | Scratch Buffer |
+|:---|:---:|:---:|:---:|
+| **Tier 0 (EKF)** | `463.85 ± 9.68 ns` | — | N/A (0 B) |
+| **Tier 1 (INT4)** | `24023.23 ± 2149.35 ns` | `34570.00 ± 1850.00 ns` | 8,192 B (8.00 KB) |
+| **Tier 2 (INT8)** | `128953.33 ± 11323.73 ns` | `119650.00 ± 8430.00 ns` | 8,192 B (8.00 KB) |
+
+### Statistical Detail
+| Component | Mean | Min | Max | Samples |
+|:---|:---:|:---:|:---:|:---:|
+| Tier 0 Hot | 473.27 | 435.02 | 606.78 | 31 |
+| Tier 1 Hot | 24845.92 | 21458.04 | 31292.08 | 31 |
+| Tier 1 Cold | 34068.07 | 26930.00 | 40500.00 | 31 |
+| Tier 2 Hot | 128941.76 | 102144.80 | 145342.67 | 31 |
+| Tier 2 Cold | 124296.13 | 105930.00 | 150620.00 | 31 |
+
+## 2. Cascade Trace Results
+
+End-to-end evaluation across standard **2,000 steps** input trace (`k=1.0` benchmark sequence).
 
 | Cascade Metric | Realized Value | Performance Analysis |
 |:---|:---:|:---|
-| **Total Evaluation Time** | `21.73 ms` | Cumulative trace execution time |
+| **Total Evaluation Time** | `18.488 ms (18,487,500.0 ns)` | Cumulative trace execution time |
+| **Total Steps Evaluated** | `2,000` | Standard deterministic benchmark length |
 | **Tier 1 Invocations ($N_1$)** | `303` | Escalation rate: **15.15%** (84.85% filtered by Tier 0) |
 | **Tier 2 Invocations ($N_2$)** | `90` | Escalation rate: **4.50%** (70.30% resolved by Tier 1) |
-| **Effective Per-Step Cost** | `10.86 µs/step` | Realized amortized execution cost per sample |
-| **Always-On Tier 2 Baseline** | `107.98 µs/step` | Un-gated Tier 2 execution on every step (measured) |
-| **Compute Latency Reduction** | **89.94%** | Relative savings vs Always-On Tier 2 baseline |
-| **Effective Speedup Factor** | **9.94×** | Realized acceleration from adaptive tri-tier gating |
+| **Effective Per-Step Latency** | `9243.75 ns/step` | Realized amortized execution cost per sample |
+| **Always-On Tier 2 Baseline** | `105216.90 ns/step` | Un-gated Tier 2 execution on every step |
+| **Compute Latency Reduction** | **91.21%** | Relative savings vs Always-On Tier 2 baseline |
+| **Effective Speedup Factor** | **11.38×** | Realized acceleration from adaptive tri-tier gating |
 
-### 3. Static Binary Footprint & Differencing (`-Wl,--gc-sections`)
+> **Note:** The PACI cascade reduces computational work by 91.2%, providing a strong proxy for reduced dynamic compute energy.
 
-| Build Variant Target | `.text` (Flash Code) | `.data` (Init Data) | `.bss` (Uninit RAM) | Flash Footprint | RAM Footprint |
-|:---|:---:|:---:|:---:|:---:|:---:|
-| `core_only` | 14,692 B | 2,808 B | 336 B | **17,500 B (17.09 KB)** | **3,144 B (3.07 KB)** |
-| `core+tier1` | 33,040 B | 12,104 B | 336 B | **45,144 B (44.09 KB)** | **12,440 B (12.15 KB)** |
-| `core+tier2` | 42,020 B | 15,256 B | 336 B | **57,276 B (55.93 KB)** | **15,592 B (15.23 KB)** |
-| `full` | 90,780 B | 15,564 B | 336 B | **106,344 B (103.85 KB)** | **15,900 B (15.53 KB)** |
+## 3. Memory & Static Footprint
 
-- **Tier 1 INT4 Flash/RAM Delta**: $+27,644\text{ B}$ Flash ($+27.00\text{ KB}$), $+9,296\text{ B}$ RAM ($+9.08\text{ KB}$)
-- **Tier 2 INT8 Flash/RAM Delta**: $+12,132\text{ B}$ Flash ($+11.85\text{ KB}$), $+3,152\text{ B}$ RAM ($+3.08\text{ KB}$)
-| Always-On CNN | 2000 | 0.0% | 100.0% | 100.0% | 0.0% |
-| Moving Average | 79 | 96.0% | 75.0% | 3.7% | 95.6% |
-| Kalman (No Physics) | 341 | 83.0% | 100.0% | 12.3% | 82.5% |
-| CUSUM Detector | 616 | 69.2% | 100.0% | 29.4% | 68.8% |
-| Variance Threshold | 101 | 95.0% | 25.0% | 2.1% | 94.5% |
+## 4. Platform & Build Metadata
 
-- **Slow Drift Detection**: Moving Average adapts to slow equipment drift (~0.2%/step) and fails to detect it (75.0% detection). PACI's physics model maintains the true physical nominal expectation ($u \to \hat{y}$), accumulating innovation error $z - \hat{z}$ that triggers NIS gating and catches 100% of drift events.
-- **Low False Alarm Rate**: PACI achieves a 4.5% false wake rate during normal operation, compared to 12.3% for non-physics Kalman and 29.4% for CUSUM.
+| Configuration Property | Value |
+|:---|:---|
+| **Target Platform** | `x86_64-native` |
+| **CPU / Core** | `Generic CPU` |
+| **Compiler** | `gcc 13.2.0 ` |
+| **Build Type** | `Unknown` |
+| **Compiler Flags** | `-O2 -fno-fast-math -ffp-contract=off` |
+| **Git Commit** | `unknown` |
+| **Timestamp** | `` |
+| **Primary Metric** | `ns_median` |
+| **Measurement Batches** | `31` |
+| **Schema Version** | `v3` |
+| **Harness Notes** | Hot and cold cache latency in ns. Cold numbers use 64MB thrashing. |
 
-### 4. Cascade Trace Execution (2,000-step Benchmark)
 
-- **Total Trace Time**: 10.60 ms (10,600,000 ns) across 2,000 steps
-- **Tier 1 Escalations ($N_1$)**: 303 (15.15% wake rate; 84.85% filtered by Tier 0 EKF)
-- **Tier 2 Escalations ($N_2$)**: 11 (0.55% wake rate; 96.37% resolved by Tier 1 screen)
-- **Effective Per-Step Latency**: `5,300.00 ns/step` vs Always-On Tier 2 baseline (`120,590.00 ns/step`)
-- **Compute Latency Reduction**: **95.61% savings** (**22.75× speedup**)
+
+<!-- BENCHMARK:END -->
 
 ---
 
@@ -109,6 +135,11 @@ python -m pytest tests/ -v
 ### Verify Zero Model Leakage
 ```bash
 python tools/check_no_fixture_in_results.py
+```
+
+### Run Live Software Demonstration (C Core + CMSIS-NN Cascade)
+```bash
+python demo_live.py
 ```
 
 ### Generate Markdown & Visual Plot Report

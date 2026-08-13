@@ -98,6 +98,10 @@ jobs:
           mkdir -p outputs/reports outputs/plots
           python bench/report.py outputs/bench/aarch64-linux.json --output-md outputs/reports/bench_report.md --output-plot outputs/plots/bench_breakdown.png
 
+      - name: Verify README benchmark synchronization
+        run: |
+          python tools/verify_readme.py
+
       - name: Publish report to Step Summary
         run: |
           if [ -f outputs/reports/bench_report.md ]; then

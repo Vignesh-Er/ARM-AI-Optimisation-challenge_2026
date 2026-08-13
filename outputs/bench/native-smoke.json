@@ -1,27 +1,32 @@
 {
-  "schema_version": 2,
+  "schema_version": 3,
   "target": "x86_64-native",
   "cpu": "Generic CPU",
   "compiler": "gcc 13.2.0",
+  "compiler_version": "13.2.0",
+  "build_type": "Release",
   "flags": "-O2 -fno-fast-math -ffp-contract=off",
   "metric": "ns_median",
-  "note": "Hot and cold cache latency in ns. Cold numbers use 64MB thrashing. FVP numbers require instruction differencing.",
+  "note": "Hot and cold cache latency in ns. Cold numbers use 64MB thrashing.",
+  "git_commit": "unknown",
+  "timestamp": "1970-01-01T00:00:00Z",
+  "cmsis_nn_version": "unknown",
   "batches": 31,
   "model_artifacts": {"tier1": "tier1_model.tflite", "tier2": "tier2_model.tflite"},
   "units": {
     "tier0_ekf": {
-      "hot": {"value": 115758.043, "mad": 126.739}
+      "hot": {"value": 463.848, "mean": 473.272, "median": 463.848, "min": 435.018, "max": 606.778, "mad": 9.681, "samples": 31}
     },
     "tier1_int4": {
-      "hot": {"value": 20010.979, "mad": 66.905},
-      "cold": {"value": 22200.000, "mad": 190.000},
+      "hot": {"value": 24023.227, "mean": 24845.915, "median": 24023.227, "min": 21458.045, "max": 31292.085, "mad": 2149.351, "samples": 31},
+      "cold": {"value": 34570.000, "mean": 34068.065, "median": 34570.000, "min": 26930.000, "max": 40500.000, "mad": 1850.000, "samples": 31},
       "scratch_bytes": 8192
     },
     "tier2_int8": {
-      "hot": {"value": 95805.870, "mad": 168.421},
-      "cold": {"value": 99850.000, "mad": 560.000},
+      "hot": {"value": 128953.333, "mean": 128941.763, "median": 128953.333, "min": 102144.800, "max": 145342.667, "mad": 11323.733, "samples": 31},
+      "cold": {"value": 119650.000, "mean": 124296.129, "median": 119650.000, "min": 105930.000, "max": 150620.000, "mad": 8430.000, "samples": 31},
       "scratch_bytes": 8192
     },
-    "cascade_trace": {"total": 16161400, "n1": 303, "n2": 90, "steps": 2000}
+    "cascade_trace": {"total": 18487500, "always_on": 210433800, "n1": 303, "n2": 90, "steps": 2000}
   }
 }

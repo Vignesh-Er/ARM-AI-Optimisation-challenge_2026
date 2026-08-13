@@ -136,6 +136,12 @@ def load_lib():
         ctypes.POINTER(ctypes.c_float),
     ]
 
+    lib.paci_tier0_step.restype = ctypes.c_int
+    lib.paci_tier0_step.argtypes = [
+        ctypes.POINTER(PaciCtx), ctypes.c_float, ctypes.c_float, ctypes.c_float, ctypes.c_float, ctypes.c_float,
+        ctypes.POINTER(ctypes.c_float),
+    ]
+
     lib.paci_infer_t2_s8.restype = ctypes.c_int
     lib.paci_infer_t2_s8.argtypes = [
         ctypes.POINTER(ctypes.c_int8), ctypes.POINTER(ctypes.c_int8), ctypes.POINTER(ctypes.c_int32),

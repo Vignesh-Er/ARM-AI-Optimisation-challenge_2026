@@ -1,7 +1,7 @@
 <!-- SPDX-License-Identifier: Apache-2.0 -->
-# PACI Benchmark Specification & Methodology (Schema v2)
+# PACI Benchmark Specification & Methodology (Schema v3)
 
-This document defines the benchmarking methodology, execution protocols, and **Schema v2 JSON specification** for the PACI 3-tier adaptive cascade system.
+This document defines the benchmarking methodology, execution protocols, and **Schema v3 JSON specification** for the PACI 3-tier adaptive cascade system.
 
 ---
 
@@ -24,19 +24,23 @@ The single measurement binary [`bench/bench_main.c`](../bench/bench_main.c) eval
 
 ---
 
-## 3. Schema v2 JSON Specification
+## 3. Schema v3 JSON Specification
 
-Benchmark results are emitted in Schema v2 format:
+Benchmark results are emitted in Schema v3 format:
 
 ```json
 {
-  "schema_version": 2,
+  "schema_version": 3,
   "target": "x86_64-native",
   "cpu": "Generic CPU",
   "compiler": "gcc 13.2.0",
+  "compiler_version": "13.2.0",
+  "build_type": "Release",
   "flags": "-O2 -fno-fast-math -ffp-contract=off",
   "metric": "ns_median",
   "note": "Hot and cold cache latency in ns. Cold numbers use 64MB thrashing.",
+  "git_commit": "9e76b4b",
+  "timestamp": "2026-08-13T12:00:00Z",
   "batches": 31,
   "model_artifacts": {
     "tier1": "tier1_model.tflite",
@@ -44,22 +48,23 @@ Benchmark results are emitted in Schema v2 format:
   },
   "units": {
     "tier0_ekf": {
-      "hot": {"value": 23982.12, "mad": 880.19}
+      "hot": {"value": 484.675, "mean": 504.466, "median": 484.675, "min": 430.863, "max": 678.713, "mad": 42.336, "samples": 31}
     },
     "tier1_int4": {
-      "hot": {"value": 23641.80, "mad": 557.84},
-      "cold": {"value": 38200.00, "mad": 3050.00},
+      "hot": {"value": 25845.065, "mean": 26367.380, "median": 25845.065, "min": 22321.852, "max": 32479.442, "mad": 2100.953, "samples": 31},
+      "cold": {"value": 32240.000, "mean": 31728.387, "median": 32240.000, "min": 25230.000, "max": 41150.000, "mad": 3680.000, "samples": 31},
       "scratch_bytes": 8192
     },
     "tier2_int8": {
-      "hot": {"value": 108390.67, "mad": 2977.01},
-      "cold": {"value": 120590.00, "mad": 4940.00},
+      "hot": {"value": 111573.375, "mean": 111600.744, "median": 111573.375, "min": 101423.270, "max": 128189.308, "mad": 3287.002, "samples": 31},
+      "cold": {"value": 123960.000, "mean": 124198.710, "median": 123960.000, "min": 108510.000, "max": 158990.000, "mad": 6800.000, "samples": 31},
       "scratch_bytes": 8192
     },
     "cascade_trace": {
-      "total": 10600000,
+      "total": 21329700,
+      "always_on": 240032400,
       "n1": 303,
-      "n2": 11,
+      "n2": 90,
       "steps": 2000
     }
   }

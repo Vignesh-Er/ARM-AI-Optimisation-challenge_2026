@@ -9,9 +9,16 @@
 #include <stdlib.h>
 #include <string.h>
 
+#ifdef __ARM_ARCH_8M_MAIN__
+// FVP / Bare metal Cortex-M55: 1 batch, 1 iteration to get exact instructions via --stat
+#define N_WARMUP_BATCHES 0
+#define N_MEASURED_BATCHES 1
+#define MIN_BATCH_DURATION_NS 0ULL
+#else
 #define N_WARMUP_BATCHES 3
 #define N_MEASURED_BATCHES 31
 #define MIN_BATCH_DURATION_NS 50000000ULL // 50 ms
+#endif
 
 // Global volatile sink to prevent dead-code elimination across loops
 static volatile int64_t g_volatile_sink = 0;
@@ -72,10 +79,8 @@ static void get_cpu_info(char *buf, size_t max_len) {
 // Tier 0 EKF Measurement
 // ---------------------------------------------------------------------------
 static void run_tier0_ekf_once(paci_ctx_t *ctx, float z, float p, float t, float w, float f) {
-    float pred = paci_physics_predict(p, t, w, f);
     float nis = 0.0f;
-    paci_status_t status = paci_ekf_step(&ctx->ekf, z, pred, &nis);
-    paci_ring_push(&ctx->ring, 0);
+    paci_status_t status = paci_tier0_step(ctx, z, p, t, w, f, &nis);
     g_volatile_sink += (int64_t)(nis * 1000.0f) + (int64_t)status;
 }
 
@@ -122,7 +127,7 @@ static bench_unit_result_t measure_tier0_ekf(void) {
         batch_ns_per_op[b] = (double)dt / (double)iters_per_batch;
     }
 
-    bench_median_mad(batch_ns_per_op, N_MEASURED_BATCHES, &res.hot_value_ns, &res.hot_mad_ns);
+    bench_calc_stats(batch_ns_per_op, N_MEASURED_BATCHES, &res.hot);
     return res;
 }
 
@@ -174,7 +179,7 @@ static bench_unit_result_t measure_tier1_int4(const int8_t window[PACI_WINDOW_SI
         uint64_t dt = bench_now_ns() - t0;
         hot_ns_per_op[b] = (double)dt / (double)hot_iters;
     }
-    bench_median_mad(hot_ns_per_op, N_MEASURED_BATCHES, &res.hot_value_ns, &res.hot_mad_ns);
+    bench_calc_stats(hot_ns_per_op, N_MEASURED_BATCHES, &res.hot);
 
     // COLD Measured (smaller iteration count per batch since cache thrashing is ~1-2ms per step)
     uint32_t cold_iters = 10;
@@ -206,7 +211,7 @@ static bench_unit_result_t measure_tier1_int4(const int8_t window[PACI_WINDOW_SI
         }
         cold_ns_per_op[b] = (double)batch_total_ns / (double)cold_iters;
     }
-    bench_median_mad(cold_ns_per_op, N_MEASURED_BATCHES, &res.cold_value_ns, &res.cold_mad_ns);
+    bench_calc_stats(cold_ns_per_op, N_MEASURED_BATCHES, &res.cold);
 
     return res;
 }
@@ -259,7 +264,7 @@ static bench_unit_result_t measure_tier2_int8(const int8_t window[PACI_WINDOW_SI
         uint64_t dt = bench_now_ns() - t0;
         hot_ns_per_op[b] = (double)dt / (double)hot_iters;
     }
-    bench_median_mad(hot_ns_per_op, N_MEASURED_BATCHES, &res.hot_value_ns, &res.hot_mad_ns);
+    bench_calc_stats(hot_ns_per_op, N_MEASURED_BATCHES, &res.hot);
 
     // COLD Measured
     uint32_t cold_iters = 10;
@@ -291,7 +296,7 @@ static bench_unit_result_t measure_tier2_int8(const int8_t window[PACI_WINDOW_SI
         }
         cold_ns_per_op[b] = (double)batch_total_ns / (double)cold_iters;
     }
-    bench_median_mad(cold_ns_per_op, N_MEASURED_BATCHES, &res.cold_value_ns, &res.cold_mad_ns);
+    bench_calc_stats(cold_ns_per_op, N_MEASURED_BATCHES, &res.cold);
 
     return res;
 }
@@ -320,12 +325,17 @@ static bench_cascade_result_t measure_cascade_trace(void) {
     res.n1 = ctx.n_t1;
     res.n2 = ctx.n_t2;
 
-    int8_t dummy_window[PACI_WINDOW_SIZE] = {0};
+    paci_ring_t t2_ring;
+    memset(&t2_ring, 0, sizeof(t2_ring));
     uint64_t t1 = bench_now_ns();
     for (uint32_t i = 0; i < BENCH_TRACE_STEPS; i++) {
         int8_t class_id = 0;
         int32_t margin = 0;
-        paci_infer_t2_s8(dummy_window, &class_id, &margin);
+        paci_ring_push(&t2_ring, quantize_measurement(bench_trace_z[i]));
+        int8_t window[PACI_WINDOW_SIZE];
+        if (paci_ring_read(&t2_ring, window) == PACI_OK) {
+            paci_infer_t2_s8(window, &class_id, &margin);
+        }
         g_volatile_sink += class_id + margin;
     }
     res.always_on_ns = bench_now_ns() - t1;
@@ -343,7 +353,7 @@ int main(int argc, char **argv) {
     }
 
     printf("=================================================================\n");
-    printf(" PACI Benchmark Harness (Schema v2 Native Runner)\n");
+    printf(" PACI Benchmark Harness (Schema v3 Native Runner)\n");
     printf("=================================================================\n");
 
     bench_pin_to_core(0);
@@ -369,57 +379,74 @@ int main(int argc, char **argv) {
 
     bench_report_t report;
     memset(&report, 0, sizeof(report));
-    report.target = BENCH_DEFAULT_TARGET;
-    report.cpu = cpu_name;
-    report.compiler = BENCH_COMPILER_STR;
-    report.flags = "-O2 -fno-fast-math -ffp-contract=off";
-    report.metric = "ns_median";
-    report.note = "Hot and cold cache latency in ns. Cold numbers use 64MB thrashing. FVP numbers require instruction differencing.";
+    strncpy(report.target, BENCH_DEFAULT_TARGET, sizeof(report.target)-1);
+    strncpy(report.cpu, cpu_name, sizeof(report.cpu)-1);
+    strncpy(report.compiler, BENCH_COMPILER_STR, sizeof(report.compiler)-1);
+    strncpy(report.compiler_version, __VERSION__, sizeof(report.compiler_version)-1);
+    strncpy(report.build_type, "Release", sizeof(report.build_type)-1);
+    strncpy(report.flags, "-O2 -fno-fast-math -ffp-contract=off", sizeof(report.flags)-1);
+    strncpy(report.metric, "ns_median", sizeof(report.metric)-1);
+    strncpy(report.note, "Hot and cold cache latency in ns. Cold numbers use 64MB thrashing.", sizeof(report.note)-1);
+    strncpy(report.git_commit, "unknown", sizeof(report.git_commit)-1); // Set via CI
+    strncpy(report.timestamp, "1970-01-01T00:00:00Z", sizeof(report.timestamp)-1); // Set via CI
+    strncpy(report.cmsis_nn_version, "unknown", sizeof(report.cmsis_nn_version)-1);
     report.batches = N_MEASURED_BATCHES;
-    report.tier1_artifact = "tier1_model.tflite";
-    report.tier2_artifact = "tier2_model.tflite";
+    strncpy(report.tier1_artifact, "tier1_model.tflite", sizeof(report.tier1_artifact)-1);
+    strncpy(report.tier2_artifact, "tier2_model.tflite", sizeof(report.tier2_artifact)-1);
+    const char *filter = NULL;
+    if (argc > 2) {
+        filter = argv[2];
+    }
 
-    printf("Measuring tier0_ekf (hot)... ");
-    fflush(stdout);
-    report.tier0_ekf = measure_tier0_ekf();
-    printf("%.2f ns (MAD: %.2f ns)\n", report.tier0_ekf.hot_value_ns, report.tier0_ekf.hot_mad_ns);
+    if (!filter || strcmp(filter, "tier0_ekf") == 0) {
+        printf("Measuring tier0_ekf (hot)... ");
+        fflush(stdout);
+        report.tier0_ekf = measure_tier0_ekf();
+        printf("%.2f ns (MAD: %.2f ns)\n", report.tier0_ekf.hot.median, report.tier0_ekf.hot.mad);
+    }
 
-    printf("Measuring tier1_int4 (hot/cold)... ");
-    fflush(stdout);
-    report.tier1_int4 = measure_tier1_int4(test_window);
-    printf("Hot: %.2f ns (MAD: %.2f ns) | Cold: %.2f ns (MAD: %.2f ns)\n",
-           report.tier1_int4.hot_value_ns, report.tier1_int4.hot_mad_ns,
-           report.tier1_int4.cold_value_ns, report.tier1_int4.cold_mad_ns);
+    if (!filter || strcmp(filter, "tier1_int4") == 0) {
+        printf("Measuring tier1_int4 (hot/cold)... ");
+        fflush(stdout);
+        report.tier1_int4 = measure_tier1_int4(test_window);
+        printf("Hot: %.2f ns (MAD: %.2f ns) | Cold: %.2f ns (MAD: %.2f ns)\n",
+               report.tier1_int4.hot.median, report.tier1_int4.hot.mad,
+               report.tier1_int4.cold.median, report.tier1_int4.cold.mad);
+    }
 
-    printf("Measuring tier2_int8 (hot/cold)... ");
-    fflush(stdout);
-    report.tier2_int8 = measure_tier2_int8(test_window);
-    printf("Hot: %.2f ns (MAD: %.2f ns) | Cold: %.2f ns (MAD: %.2f ns)\n",
-           report.tier2_int8.hot_value_ns, report.tier2_int8.hot_mad_ns,
-           report.tier2_int8.cold_value_ns, report.tier2_int8.cold_mad_ns);
+    if (!filter || strcmp(filter, "tier2_int8") == 0) {
+        printf("Measuring tier2_int8 (hot/cold)... ");
+        fflush(stdout);
+        report.tier2_int8 = measure_tier2_int8(test_window);
+        printf("Hot: %.2f ns (MAD: %.2f ns) | Cold: %.2f ns (MAD: %.2f ns)\n",
+               report.tier2_int8.hot.median, report.tier2_int8.hot.mad,
+               report.tier2_int8.cold.median, report.tier2_int8.cold.mad);
+    }
 
-    printf("Measuring cascade_trace (%d steps)... ", BENCH_TRACE_STEPS);
-    fflush(stdout);
-    report.cascade_trace = measure_cascade_trace();
-    printf("Total: %.2f ms | N1 wakes: %u | N2 wakes: %u\n",
-           (double)report.cascade_trace.total_ns / 1e6,
-           report.cascade_trace.n1, report.cascade_trace.n2);
+    if (!filter || strcmp(filter, "cascade_trace") == 0) {
+        printf("Measuring cascade_trace (%d steps)... ", BENCH_TRACE_STEPS);
+        fflush(stdout);
+        report.cascade_trace = measure_cascade_trace();
+        printf("Total: %.2f ms | N1 wakes: %u | N2 wakes: %u\n",
+               (double)report.cascade_trace.total_ns / 1e6,
+               report.cascade_trace.n1, report.cascade_trace.n2);
+    }
 
     // MAD/median quality checks (warn or flag if MAD > 10%)
     int noisy_count = 0;
-    if (report.tier0_ekf.hot_mad_ns / report.tier0_ekf.hot_value_ns > 0.10) {
+    if (report.tier0_ekf.hot.mad / report.tier0_ekf.hot.median > 0.10) {
         fprintf(stderr, "WARNING: tier0_ekf MAD/median > 10%% (MAD=%.2f, Median=%.2f)\n",
-                report.tier0_ekf.hot_mad_ns, report.tier0_ekf.hot_value_ns);
+                report.tier0_ekf.hot.mad, report.tier0_ekf.hot.median);
         noisy_count++;
     }
-    if (report.tier1_int4.hot_mad_ns / report.tier1_int4.hot_value_ns > 0.10) {
+    if (report.tier1_int4.hot.mad / report.tier1_int4.hot.median > 0.10) {
         fprintf(stderr, "WARNING: tier1_int4 hot MAD/median > 10%% (MAD=%.2f, Median=%.2f)\n",
-                report.tier1_int4.hot_mad_ns, report.tier1_int4.hot_value_ns);
+                report.tier1_int4.hot.mad, report.tier1_int4.hot.median);
         noisy_count++;
     }
-    if (report.tier2_int8.hot_mad_ns / report.tier2_int8.hot_value_ns > 0.10) {
+    if (report.tier2_int8.hot.mad / report.tier2_int8.hot.median > 0.10) {
         fprintf(stderr, "WARNING: tier2_int8 hot MAD/median > 10%% (MAD=%.2f, Median=%.2f)\n",
-                report.tier2_int8.hot_mad_ns, report.tier2_int8.hot_value_ns);
+                report.tier2_int8.hot.mad, report.tier2_int8.hot.median);
         noisy_count++;
     }
 

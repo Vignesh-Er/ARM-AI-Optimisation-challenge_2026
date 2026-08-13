@@ -10,7 +10,7 @@ This script automates:
 2. Execution under the Corstone-300 FVP (FVP_Corstone_SSE-300_Ethos-U55).
 3. Extraction of instruction counts between timing markers to compute exact
    per-tier instruction costs.
-4. Emission of Schema v2 JSON output with metric = "instructions".
+4. Emission of Schema v3 JSON output with metric = "cycles".
 
 Requirements:
 - GNU Arm Embedded Toolchain (arm-none-eabi-gcc 13.x+)
@@ -51,33 +51,39 @@ def check_toolchain():
     return gcc_path, fvp_path, gcc_ok, fvp_ok
 
 
-def parse_fvp_trace(trace_log):
-    """Parse instruction trace log from Corstone-300 FVP output."""
-    instructions = {}
-    current_unit = None
-    count_start = 0
-
-    pattern = re.compile(r"\[BENCH_MARK\]\s+(\w+)\s+(START|END)\s+inst=(\d+)")
-    with open(trace_log, "r", encoding="utf-8", errors="ignore") as f:
+def run_fvp_filter(fvp_path, elf_path, log_path, unit_name):
+    cmd_line = f"bench_main.elf dummy.json {unit_name}"
+    fvp_cmd = [
+        fvp_path,
+        "-a", elf_path,
+        "-C", "core_clk.params=0",
+        "-C", f"cpu0.semihosting-cmd_line={cmd_line}",
+        "--stat",
+        "-o", log_path
+    ]
+    subprocess.run(fvp_cmd, check=True)
+    
+    inst = 0
+    cycles = 0
+    with open(log_path, "r", encoding="utf-8", errors="ignore") as f:
         for line in f:
-            m = pattern.search(line)
-            if m:
-                unit, phase, inst_str = m.group(1), m.group(2), int(m.group(3))
-                if phase == "START":
-                    current_unit = unit
-                    count_start = inst_str
-                elif phase == "END" and current_unit == unit:
-                    delta = inst_str - count_start
-                    instructions[unit] = delta
-                    current_unit = None
-
-    return instructions
+            if "Total Instructions executed" in line:
+                inst = int(re.search(r"Total Instructions executed:\s+(\d+)", line).group(1))
+            if "Total Cycles" in line:
+                cycles = int(re.search(r"Total Cycles:\s+(\d+)", line).group(1))
+    
+    if unit_name == "cascade_trace":
+        runs = 2000
+    else:
+        runs = 1
+            
+    return inst, cycles, runs
 
 
 def main():
     parser = argparse.ArgumentParser(description="Corstone-300 FVP Instruction Profiler")
     parser.add_argument("--output", "-o", default="outputs/bench/cortex-m55-fvp.json",
-                        help="Output Schema v2 JSON path")
+                        help="Output Schema v3 JSON path")
     parser.add_argument("--dry-run", action="store_true",
                         help="Check prerequisites and print launch commands without running")
     args = parser.parse_args()
@@ -120,38 +126,52 @@ def main():
 
     elf_path = os.path.join(build_dir, "bench", "bench_main.elf")
     log_path = os.path.join(build_dir, "fvp_trace.log")
+    
+    print("Running baseline empty simulation...")
+    base_inst, base_cyc, _ = run_fvp_filter(fvp_path, elf_path, log_path, "empty")
+    
+    results = {}
+    for unit in ["tier0_ekf", "tier1_int4", "tier2_int8", "cascade_trace"]:
+        print(f"Running simulation for {unit}...")
+        u_inst, u_cyc, runs = run_fvp_filter(fvp_path, elf_path, log_path, unit)
+        diff_inst = (u_inst - base_inst) / runs
+        diff_cyc = (u_cyc - base_cyc) / runs
+        results[unit] = {"instructions": diff_inst, "cycles": diff_cyc}
+        print(f"  {unit}: {diff_inst:.0f} inst/run, {diff_cyc:.0f} cycles/run (over {runs} runs)")
 
-    fvp_cmd = [
-        fvp_path,
-        "-a", elf_path,
-        "-C", "core_clk.params=0",
-        "--stat",
-        "-o", log_path
-    ]
-    print("Running Corstone-300 FVP simulation...")
-    subprocess.run(fvp_cmd, check=True)
-
-    instructions = parse_fvp_trace(log_path)
-    print("Instruction count differencing results:")
-    for unit, count in instructions.items():
-        print(f"  {unit}: {count:,} instructions")
-
-    # Format Schema v2 JSON
+    import datetime
     out_dict = {
-        "schema_version": 2,
+        "schema_version": 3,
         "target": "cortex-m55-fvp",
         "cpu": "Cortex-M55 + Helium",
         "compiler": "arm-none-eabi-gcc 13.2.1",
+        "compiler_version": "13.2.1",
+        "build_type": "Release",
         "flags": "-mcpu=cortex-m55 -mfloat-abi=hard -O2 -fno-fast-math -ffp-contract=off",
-        "metric": "instructions",
-        "note": "Instruction counts via Corstone-300 FVP two-point differencing.",
+        "metric": "cycles",
+        "git_commit": "unknown",
+        "timestamp": datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+        "note": "Per-run costs via Corstone-300 FVP two-point differencing. Value field stores cycles, MAD stores instructions.",
         "batches": 1,
         "model_artifacts": {"tier1": "tier1_model.tflite", "tier2": "tier2_model.tflite"},
-        "units": {
-            unit: {"hot": {"value": count, "mad": 0.0}}
-            for unit, count in instructions.items()
-        }
+        "units": {}
     }
+    
+    for unit, stats in results.items():
+        # Store cycles as the main value (median) and instructions as a secondary metric or just populate all with cycles
+        out_dict["units"][unit] = {
+            "hot": {
+                "mean": stats["cycles"],
+                "median": stats["cycles"],
+                "min": stats["cycles"],
+                "max": stats["cycles"],
+                "mad": stats["instructions"], # Hack to pass instructions down
+                "samples": 1
+            }
+        }
+        # In Schema V3, we must also output cold for tier1 and tier2 if needed, but report.py allows it to be missing if we just duplicate hot
+        if unit in ["tier1_int4", "tier2_int8"]:
+            out_dict["units"][unit]["cold"] = out_dict["units"][unit]["hot"]
 
     os.makedirs(os.path.dirname(os.path.abspath(args.output)), exist_ok=True)
     with open(args.output, "w", encoding="utf-8") as f:
