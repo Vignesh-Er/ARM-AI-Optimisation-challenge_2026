@@ -85,6 +85,11 @@ def validate_and_parse_schema_v3(data: Any) -> Dict[str, Any]:
     target = _validate_str(data["target"], "target")
     cpu = _validate_str(data["cpu"], "cpu", allow_empty=True)
     compiler = _validate_str(data["compiler"], "compiler", allow_empty=True)
+    compiler_version = _validate_str(data.get("compiler_version", ""), "compiler_version", allow_empty=True)
+    build_type = _validate_str(data.get("build_type", "Release"), "build_type", allow_empty=True)
+    git_commit = _validate_str(data.get("git_commit", "unknown"), "git_commit", allow_empty=True)
+    timestamp = _validate_str(data.get("timestamp", ""), "timestamp", allow_empty=True)
+    cmsis_nn_version = _validate_str(data.get("cmsis_nn_version", "unknown"), "cmsis_nn_version", allow_empty=True)
     flags = _validate_str(data["flags"], "flags", allow_empty=True)
     metric = _validate_str(data["metric"], "metric", allow_empty=True)
     note = _validate_str(data["note"], "note", allow_empty=True)
@@ -228,6 +233,11 @@ def validate_and_parse_schema_v3(data: Any) -> Dict[str, Any]:
         "target": target,
         "cpu": cpu,
         "compiler": compiler,
+        "compiler_version": compiler_version,
+        "build_type": build_type,
+        "git_commit": git_commit,
+        "timestamp": timestamp,
+        "cmsis_nn_version": cmsis_nn_version,
         "flags": flags,
         "metric": metric,
         "note": note,
@@ -266,6 +276,12 @@ def generate_markdown_report(data: Dict[str, Any]) -> str:
     target = data["target"]
     cpu = data["cpu"]
     compiler = data["compiler"]
+    compiler_version = data.get("compiler_version", "")
+    build_type = data.get("build_type", "Release")
+    git_commit = data.get("git_commit", "unknown")
+    timestamp = data.get("timestamp", "")
+    cmsis_nn_version = data.get("cmsis_nn_version", "unknown")
+    schema_version = data.get("schema_version", 3)
     flags = data["flags"]
     metric = data["metric"]
     note = data["note"]
@@ -403,14 +419,14 @@ def generate_markdown_report(data: Dict[str, Any]) -> str:
         "|:---|:---|",
         f"| **Target Platform** | `{target}` |",
         f"| **CPU / Core** | `{cpu}` |",
-        f"| **Compiler** | `{compiler} {data.get('compiler_version', '')}` |",
-        f"| **Build Type** | `{data.get('build_type', 'Unknown')}` |",
+        f"| **Compiler** | `{compiler}{(' ' + compiler_version) if compiler_version and compiler_version not in compiler else ''}` |",
+        f"| **Build Type** | `{build_type}` |",
         f"| **Compiler Flags** | `{flags}` |",
-        f"| **Git Commit** | `{data.get('git_commit', 'unknown')}` |",
-        f"| **Timestamp** | `{data.get('timestamp', '')}` |",
+        f"| **Git Commit** | `{git_commit}` |",
+        f"| **Timestamp** | `{timestamp}` |",
         f"| **Primary Metric** | `{metric}` |",
         f"| **Measurement Batches** | `{batches}` |",
-        f"| **Schema Version** | `v{data['schema_version']}` |",
+        f"| **Schema Version** | `v{schema_version}` |",
         f"| **Harness Notes** | {note} |",
         "",
     ])

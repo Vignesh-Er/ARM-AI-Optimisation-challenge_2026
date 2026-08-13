@@ -62,11 +62,11 @@ End-to-end evaluation across standard **2,000 steps** input trace (`k=1.0` bench
 |:---|:---|
 | **Target Platform** | `x86_64-native` |
 | **CPU / Core** | `Generic CPU` |
-| **Compiler** | `gcc 13.2.0 ` |
-| **Build Type** | `Unknown` |
+| **Compiler** | `gcc 13.2.0` |
+| **Build Type** | `Release` |
 | **Compiler Flags** | `-O2 -fno-fast-math -ffp-contract=off` |
-| **Git Commit** | `unknown` |
-| **Timestamp** | `` |
+| **Git Commit** | `e5ff11b` |
+| **Timestamp** | `2026-08-13T16:47:39Z` |
 | **Primary Metric** | `ns_median` |
 | **Measurement Batches** | `31` |
 | **Schema Version** | `v3` |
