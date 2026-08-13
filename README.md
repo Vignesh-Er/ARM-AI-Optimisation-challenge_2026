@@ -9,7 +9,7 @@ AVAILABLE_HARDWARE: "none"
 [![CI Status](https://img.shields.io/badge/CI-arm--bench_passing-brightgreen.svg)](.github/workflows/arm-bench.yml)
 [![Schema](https://img.shields.io/badge/Schema-v3_Schema_Validated-success.svg)](docs/BENCHMARKING.md)
 
-PACI is a physics-informed 3-tier cascade for Arm Cortex-M that avoids unnecessary neural inference, reducing end-to-end compute by up to 90% while maintaining reference-model classification parity.
+PACI is a physics-informed 3-tier cascade for Arm Cortex-M-class edge AI that avoids unnecessary neural inference. On a deterministic 2,000-step synthetic process trace, PACI reduces end-to-end compute by 90.58% and achieves a 10.62× effective speedup versus always-on INT8 inference, while maintaining reference-model classification parity on the validated test set.
 
 ---
 
@@ -19,7 +19,7 @@ This repository builds upon theoretical work to provide a defensible, production
 
 1. **Python/PACI Baseline**: We ported the theoretical model (from the upstream `Karthikdebuger/PACI` repository) into a fully functional training and quantization pipeline.
 2. **Embedded C Core (`paci_core`)**: The entire C implementation—including the state machine, circular buffers, C-EKF, and zero-allocation cascade logic—is 100% original work written specifically for this challenge.
-3. **Quantization & CMSIS-NN Validation**: We developed the TFLite quantization pipeline and achieved exact bit-matching validation against CMSIS-NN (`arm_convolve_s4` and `arm_convolve_wrapper_s8`) running natively and in the Corstone-300 FVP.
+3. **Quantization & CMSIS-NN Validation**: We developed the TFLite quantization pipeline and achieved exact bit-matching validation against CMSIS-NN (`arm_convolve_s4` and `arm_convolve_wrapper_s8`) running natively, with an automated profiling harness implemented for Corstone-300 FVP cross-compilation.
 
 ---
 
@@ -29,7 +29,7 @@ This repository builds upon theoretical work to provide a defensible, production
 graph TD
     A["Raw Sensor Sample (z_t, u_t)"] --> B["Tier 0: Physics-EKF State Predictor"]
     B --> C{"NIS Gating Check\n(nis > χ²₉₅ = 3.841)"}
-    C -- "Normal Operation (NIS ≤ 3.841)" --> D["Sleep / Skip Neural Inference\n(~23.98 μs per step)"]
+    C -- "Normal Operation (NIS ≤ 3.841)" --> D["Sleep / Skip Neural Inference\n(~465 ns per step)"]
     C -- "Anomaly Detected (NIS > 3.841)" --> E["Tier 1: INT4 1D-CNN Screen\n(arm_convolve_s4, 216 B weights)"]
     E --> F{"Tier 1 Decision\n(class != 0 OR low margin)"}
     F -- "Screening Resolved" --> G["Report Anomaly / Clear"]
@@ -129,7 +129,7 @@ cmake --build build --target bench_main core_only core+tier1 core+tier2 full
 ./build/bench/bench_main outputs/bench/native-smoke.json
 ```
 
-### Run Python Test Suite (95/95 Unit & Integration Tests)
+### Run Python Test Suite (96/96 Unit & Integration Tests)
 ```bash
 python -m pytest tests/ -v
 ```
@@ -200,10 +200,11 @@ python bench/report.py outputs/bench/native-smoke.json --output-md outputs/repor
 
 ---
 
-## 🎯 Supported Hardware & Platforms
+## 🎯 Target Platforms & Execution Evidence
 
-1. **aarch64 Linux** (`ubuntu-24.04-arm` CI runner / native host)
-2. **Cortex-M55 / Corstone-300 FVP + Helium** (Arm Corstone-300 FVP model via `bench/fvp_profile.py`)
+1. **x86_64 Native Development** (`gcc 13.2.0` / host environment) — *Executed & Validated in benchmark report*
+2. **aarch64 Linux** (`ubuntu-24.04-arm` GitHub Actions runner) — *Automated in CI via `.github/workflows/arm-bench.yml`*
+3. **Arm Cortex-M55 / Corstone-300 FVP + Helium MVE** — *Harness implemented via `bench/fvp_profile.py` & `docs/FVP_INSTRUCTIONS.md` (cross-compilation ready)*
 
 ---
 

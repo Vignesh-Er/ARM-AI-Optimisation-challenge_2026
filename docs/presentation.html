@@ -288,17 +288,17 @@
                 <div class="card">
                     <h3 style="color: var(--primary); margin-bottom: 12px; font-size: 1.3rem;">Tier 0: Physics EKF</h3>
                     <p style="font-size: 0.95rem; color: #94a3b8; margin-bottom: 12px;">Deal-Grove analytic model + Scalar Kalman Filter + NIS Statistical Gating.</p>
-                    <div class="code-box">Hot Latency: ~23.9 μs<br>RAM Footprint: 0 B scratch<br>Filters: 84.4% nominal cycles</div>
+                    <div class="code-box">Hot Latency: ~465 ns<br>RAM Footprint: 0 B scratch<br>Filters: 84.8% nominal cycles</div>
                 </div>
                 <div class="card">
                     <h3 style="color: var(--accent); margin-bottom: 12px; font-size: 1.3rem;">Tier 1: INT4 Screening</h3>
                     <p style="font-size: 0.95rem; color: #94a3b8; margin-bottom: 12px;">4-bit quantized Conv1D neural screen using CMSIS-NN <code>arm_convolve_s4</code>.</p>
-                    <div class="code-box">Flash Weights: 216 Bytes<br>Hot Latency: ~23.6 μs<br>Resolves: 96.4% anomalies</div>
+                    <div class="code-box">Flash Weights: 216 Bytes<br>Hot Latency: ~22.4 μs<br>Resolves: 70.3% anomalies</div>
                 </div>
                 <div class="card">
                     <h3 style="color: var(--warning); margin-bottom: 12px; font-size: 1.3rem;">Tier 2: INT8 Classifier</h3>
                     <p style="font-size: 0.95rem; color: #94a3b8; margin-bottom: 12px;">Full 5-class fault classifier using CMSIS-NN <code>arm_convolve_wrapper_s8</code>.</p>
-                    <div class="code-box">Invoked only: 0.55% of time<br>Hot Latency: ~108.4 μs<br>Accuracy: Bit-exact parity</div>
+                    <div class="code-box">Invoked only: 4.5% of time<br>Hot Latency: ~110.5 μs<br>Accuracy: Bit-exact parity</div>
                 </div>
             </div>
         </div>
@@ -381,7 +381,7 @@
             <div class="card" style="margin-top: 15px;">
                 <h4 style="color: #f8fafc; margin-bottom: 8px;">Key Baseline Finding:</h4>
                 <p style="color: #94a3b8; font-size: 1rem; line-height: 1.5;">
-                    Moving Average fails against slow equipment drift (only <span style="color:#ef4444; font-weight:600;">75% detection</span>) because it normalizes process drift away. PACI's physics model maintains true physical expectation, catching <span class="highlight">100% of faults</span> while saving <span class="highlight">65.0% of total energy</span>.
+                    Moving Average fails against slow equipment drift (only <span style="color:#ef4444; font-weight:600;">75% detection</span>) because it normalizes process drift away. PACI's physics model maintains true physical expectation, detecting <span class="highlight">100% of drift faults on the test set</span> while avoiding over <span class="highlight">84% of unnecessary CNN wake-ups</span>.
                 </p>
             </div>
         </div>
