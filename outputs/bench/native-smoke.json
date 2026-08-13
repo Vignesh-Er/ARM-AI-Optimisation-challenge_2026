@@ -12,7 +12,7 @@
   "timestamp": "1970-01-01T00:00:00Z",
   "cmsis_nn_version": "unknown",
   "batches": 31,
-  "model_artifacts": {"tier1": "tier1_model.tflite", "tier2": "tier2_model.tflite"},
+  "model_artifacts": {"tier1": "outputs/models/tier1_release.tflite", "tier2": "outputs/models/tier2_release.tflite"},
   "units": {
     "tier0_ekf": {
       "hot": {"value": 465.196, "mean": 463.822, "median": 465.196, "min": 428.569, "max": 514.318, "mad": 12.220, "samples": 31}
@@ -28,5 +28,17 @@
       "scratch_bytes": 8192
     },
     "cascade_trace": {"total": 23020300, "always_on": 244418400, "n1": 303, "n2": 90, "steps": 2000}
+  },
+  "footprint": {
+    "variants": {
+      "core_only": {"text": 15004, "data": 2808, "bss": 336, "total": 18148},
+      "core+tier1": {"text": 33712, "data": 12136, "bss": 336, "total": 46184},
+      "core+tier2": {"text": 41196, "data": 15288, "bss": 336, "total": 56820},
+      "full": {"text": 114156, "data": 16192, "bss": 2864, "total": 133212}
+    },
+    "per_tier_delta": {
+      "tier1": {"text": 18708, "data": 9328, "bss": 0, "total": 28036},
+      "tier2": {"text": 26192, "data": 12480, "bss": 0, "total": 38672}
+    }
   }
 }

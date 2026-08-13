@@ -46,6 +46,7 @@ graph TD
 
 
 
+
 # PACI Benchmark Report: `x86_64-native`
 
 > Automated hardware benchmark evaluation conforming to **Schema v3** on **x86_64-native**.
@@ -88,6 +89,22 @@ End-to-end evaluation across standard **2,000 steps** input trace (`k=1.0` bench
 
 ## 3. Memory & Static Footprint
 
+### Binary Configuration Variants
+
+| Variant Configuration | Text (Flash) | Data (Init) | BSS (Zero-Init) | Total Static Footprint |
+|:---|:---:|:---:|:---:|:---:|
+| `core_only` | `15,004 B (14.65 KB)` | `2,808 B (2.74 KB)` | `336 B` | `18,148 B (17.72 KB)` |
+| `core+tier1` | `33,712 B (32.92 KB)` | `12,136 B (11.85 KB)` | `336 B` | `46,184 B (45.10 KB)` |
+| `core+tier2` | `41,196 B (40.23 KB)` | `15,288 B (14.93 KB)` | `336 B` | `56,820 B (55.49 KB)` |
+| `full` | `114,156 B (111.48 KB)` | `16,192 B (15.81 KB)` | `2,864 B (2.80 KB)` | `133,212 B (130.09 KB)` |
+
+### Incremental Per-Tier Memory Delta
+
+| Subsystem Tier | Incremental Text (Flash) | Incremental Data | Incremental BSS (RAM) | Total Incremental Cost |
+|:---|:---:|:---:|:---:|:---:|
+| **Tier 1 (INT4)** | `+18,708 B (18.27 KB)` | `+9,328 B (9.11 KB)` | `+0 B` | `+28,036 B (27.38 KB)` |
+| **Tier 2 (INT8)** | `+26,192 B (25.58 KB)` | `+12,480 B (12.19 KB)` | `+0 B` | `+38,672 B (37.77 KB)` |
+
 ## 4. Platform & Build Metadata
 
 | Configuration Property | Value |
@@ -103,6 +120,7 @@ End-to-end evaluation across standard **2,000 steps** input trace (`k=1.0` bench
 | **Measurement Batches** | `31` |
 | **Schema Version** | `v3` |
 | **Harness Notes** | Hot and cold cache latency in ns. Cold numbers use 64MB thrashing. |
+
 
 
 
