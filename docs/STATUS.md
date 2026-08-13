@@ -50,14 +50,14 @@ the README only as noted future work, never as an estimate.
   alongside it.
 
 ## Phase checklist
-
-- [x] Phase 0 — Compliance and hygiene
-- [x] Phase 1 — Unified C core
-- [x] Phase 2 — CMSIS-NN integration and export
-- [ ] Phase 3 — Measurement harness
-- [ ] Phase 4 — Honest benchmark rebuild
-- [ ] Phase 5 — Rounding-bias budget
-- [ ] Phase 6 — CI and docs
+ 
+ - [x] Phase 0 — Compliance and hygiene
+ - [x] Phase 1 — Unified C core
+ - [x] Phase 2 — CMSIS-NN integration and export
+ - [x] Phase 3 — Measurement harness
+ - [x] Phase 4 — Honest benchmark rebuild
+ - [x] Phase 5 — Rounding-bias budget
+ - [x] Phase 6 — CI and docs
 
 ## Confirmed defect list (D1-D8), verified against actual source on 2026-08-10
 

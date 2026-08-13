@@ -12,11 +12,11 @@
 ## 0:20 - 1:00 | The Ladder (40s)
 *(Visual: Slide showing the 3-Tier PACI Cascade Architecture)*
 **Speaker:** "Enter PACI. We've built an evidence-proportional inference cascade that only computes what it needs to. 
-- Tier 0 is a hyper-efficient Physics EKF. It tracks the machine's state using just 20 microseconds per step.
+- Tier 0 is a hyper-efficient Physics EKF. It tracks the machine's state using just ~465 nanoseconds per step.
 - Only when the EKF detects a statistical anomaly—an NIS threshold breach—do we wake Tier 1. 
 - Tier 1 is an ultra-fast INT4 1D-CNN. It acts as a cheap anomaly screener. 
 - If Tier 1 confirms the anomaly, we finally trigger Tier 2, our heavier INT8 1D-CNN for detailed failure classification. 
-This means we achieve DNN-level accuracy while spending 90% of our time in a micro-watt physics tracker."
+This means we achieve DNN-level accuracy while spending over 84% of our time in a micro-watt physics tracker."
 
 ## 1:00 - 2:00 | Live Terminal Demo (60s)
 *(Visual: Split screen. Left: Presentation. Right: Live Terminal running `python demo_live.py`)*
@@ -24,7 +24,7 @@ This means we achieve DNN-level accuracy while spending 90% of our time in a mic
 *(Run `python demo_live.py`)*
 Watch the real-time stream. You can see the EKF coasting cleanly through normal noise—that's the green dot. It costs almost nothing. 
 Suddenly, a transient shock hits. The EKF detects the divergence, and Tier 1 wakes up (Yellow `T1`). Tier 1 isn't sure, so it wakes Tier 2 (Red `T2` and `!!!`), which successfully classifies a bearing fault. 
-Look at the summary at the bottom: Out of 1000 steps, we only woke the neural networks a fraction of the time, dropping our effective compute cost by over 90%."
+Look at the summary at the bottom: Out of the 2,000-step trace, we only woke the neural networks a fraction of the time, dropping our effective compute cost by 90.58% (10.62× speedup)."
 
 ## 2:00 - 2:40 | The Bias Budget Plot (40s)
 *(Visual: Full screen showing `outputs/plots/bias_predicted_vs_measured.png` from `docs/BIAS_BUDGET.md`)*
