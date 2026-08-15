@@ -4,6 +4,17 @@ All notable changes and GATE milestones for the PACI-Arm project are documented 
 
 ---
 
+## [Post-Submission] - 2026-08-14 — Internal Verification Notes
+
+### Verified
+- Confirmed `dccd44d` (2026-08-13) corrected a release-model/CMSIS-NN weight-header desynchronization: the C weight headers compiled into the cascade did not byte-exact match the designated `tier1_release.tflite` / `tier2_release.tflite` release models. Verified by re-running `tools/export_cmsisnn.py` against the (unchanged since Phase 5) release models and confirming a byte-for-byte match against the committed headers. No retraining occurred.
+- Internal rerun of the canonical benchmark against this corrected state measured 94.32% compute reduction / 17.62× effective speedup (N1=303, N2=11) — better than the documented 90.58% / 10.62× (N2=90). The documented submission headline and all video-facing assets are intentionally retained as-is for consistency with the submitted demonstration; this note is recorded for provenance only and is not a change to public-facing figures.
+
+### Removed
+- `outputs/reports/native-smoke.md` and `outputs/plots/native-smoke.png` — orphaned, unreferenced duplicate report artifacts from an earlier naming convention that disagreed with both the documented and the internally-measured numbers.
+
+---
+
 ## [Phase 6] - 2026-08-13 — CI & Final Submission Polish
 
 ### Added

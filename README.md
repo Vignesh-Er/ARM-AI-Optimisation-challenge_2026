@@ -41,12 +41,6 @@ graph TD
 ## 📊 Measured Benchmark Results
 <!-- BENCHMARK:BEGIN -->
 
-
-
-
-
-
-
 # PACI Benchmark Report: `x86_64-native`
 
 > Automated hardware benchmark evaluation conforming to **Schema v3** on **x86_64-native**.
@@ -121,11 +115,6 @@ End-to-end evaluation across standard **2,000 steps** input trace (`k=1.0` bench
 | **Schema Version** | `v3` |
 | **Harness Notes** | Hot and cold cache latency in ns. Cold numbers use 64MB thrashing. |
 
-
-
-
-
-
 <!-- BENCHMARK:END -->
 
 ---
@@ -188,7 +177,7 @@ python bench/report.py outputs/bench/native-smoke.json --output-md outputs/repor
 │   ├── STATUS.md            # Complete phase & GATE engineering log
 │   ├── BENCHMARKING.md      # Schema v3 benchmark specification
 │   ├── FVP_INSTRUCTIONS.md  # Corstone-300 FVP instruction profiling guide
-│   └── ROUNDING_BIAS_BUDGET.md # CMSIS-NN single-rounding bias analysis
+│   └── BIAS_BUDGET.md       # CMSIS-NN single-rounding bias analysis
 ├── paci_core/               # Production C Library
 │   ├── include/             # paci_core.h, paci_internal.h, paci_params.h, tier1/2 weights
 │   └── src/                 # paci_physics.c, paci_ekf.c, paci_ring.c, paci_cascade.c, paci_infer.c

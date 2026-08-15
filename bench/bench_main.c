@@ -380,7 +380,7 @@ int main(int argc, char **argv) {
     bench_report_t report;
     memset(&report, 0, sizeof(report));
     strncpy(report.target, BENCH_DEFAULT_TARGET, sizeof(report.target)-1);
-    strncpy(report.cpu, cpu_name, sizeof(report.cpu)-1);
+    snprintf(report.cpu, sizeof(report.cpu), "%s", cpu_name);
     strncpy(report.compiler, BENCH_COMPILER_STR, sizeof(report.compiler)-1);
     strncpy(report.compiler_version, __VERSION__, sizeof(report.compiler_version)-1);
     strncpy(report.build_type, "Release", sizeof(report.build_type)-1);
