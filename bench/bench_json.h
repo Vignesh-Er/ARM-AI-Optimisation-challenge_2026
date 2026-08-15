@@ -30,7 +30,7 @@ typedef struct {
 
 typedef struct {
     char target[32];
-    char cpu[64];
+    char cpu[128];
     char compiler[64];
     char compiler_version[32];
     char build_type[32];
